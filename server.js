@@ -20,13 +20,60 @@ const {
     jidDecode
 } = require('baileys');
 
-// Chargement sécurisé du moteur principal ElitePro
+// Configuration globale injectée dans le scope Node
+let botConfig = {
+    botName: 'Revolution MD',
+    ownerName: 'Mr Christ X',
+    ownerNumber: '50937081286',
+    prefix: '.',
+    autoSaveContact: true,
+    autoViewStatus: true,
+    autoLikeStatus: true,
+    autoLikeStatusEmoji: '🔥',
+    autoReplyStatus: false,
+    autoReplyStatusText: '🩸 Statut vu par Revolution MD (Mr Christ X) !'
+};
+
+const configPath = path.join(__dirname, 'config.json');
+try {
+    if (fs.existsSync(configPath)) {
+        botConfig = { ...botConfig, ...JSON.parse(fs.readFileSync(configPath, 'utf8')) };
+    }
+} catch (e) {}
+
+// Initialisation globale indispensable pour ElitePro.js
+global.prefix = botConfig.prefix || '.';
+global.botname = botConfig.botName || 'Revolution MD';
+global.ownername = botConfig.ownerName || 'Mr Christ X';
+global.author = 'Mr Christ X';
+global.packname = 'Revolution MD';
+global.botMode = 'public';
+global.autoread = false;
+global.autobio = false;
+global.autoTyping = false;
+global.autoRecording = false;
+global.autorecordtype = false;
+global.autoreact = false;
+global.autoviewstatus = true;
+global.autolikestatus = true;
+global.autolikestatusEmoji = '🔥';
+global.mess = {
+    owner: '👑 Cette commande est réservée au créateur (Mr Christ X).',
+    admin: '⚠️ Cette commande est réservée aux administrateurs.',
+    botAdmin: '⚠️ Le bot doit être administrateur du groupe.',
+    group: '⚠️ Cette commande fonctionne uniquement dans un groupe.',
+    private: '⚠️ Cette commande fonctionne uniquement en privé.',
+    wait: '⏳ Veuillez patienter...',
+    done: '✅ Exécuté avec succès !',
+    error: '❌ Une erreur est survenue.'
+};
+
 let EliteProHandler = null;
 try {
     EliteProHandler = require('./ElitePro');
-    console.log('[✓] Moteur ElitePro.js (330+ commandes) chargé avec succès.');
+    console.log('[✓] Moteur ElitePro.js (330+ commandes) connecté avec succès.');
 } catch (e) {
-    console.error('[!] Erreur dans ElitePro.js :', e);
+    console.error('[!] Erreur chargement ElitePro.js :', e);
 }
 
 const app = express();
@@ -41,83 +88,42 @@ const activeSessions = new Map();
 const sessionStatuses = new Map();
 const customCommands = new Map();
 
-// Configuration globale du bot avec options boostées
-let botConfig = {
-    botName: 'Revolution MD',
-    ownerName: 'Mr Christ X',
-    ownerNumber: '50937081286',
-    prefix: '.',
-    autoSaveContact: true,
-    autoViewStatus: true,
-    autoLikeStatus: true,
-    autoLikeStatusEmoji: '🔥',
-    autoReplyStatus: false,
-    autoReplyStatusText: '🩸 Statut vu par Revolution MD (Mr Christ X) !',
-    antiSleep: true
-};
-
-const configPath = path.join(__dirname, 'config.json');
-try {
-    if (fs.existsSync(configPath)) {
-        botConfig = { ...botConfig, ...JSON.parse(fs.readFileSync(configPath, 'utf8')) };
-    } else {
-        fs.writeFileSync(configPath, JSON.stringify(botConfig, null, 2));
-    }
-} catch (e) {}
-
-// Store en mémoire pour tracer les messages supprimés (.reveal / .rv)
 const store = {
     messages: {},
     contacts: {},
-    loadMessage: async (chat, id) => {
-        return store.messages[chat]?.[id] || null;
-    }
+    loadMessage: async (chat, id) => store.messages[chat]?.[id] || null
 };
 
-// ========================================================
-// 🚀 ENGINE ANTI-VEILLE / BOOST DE PERFORMANCE PERMANENT
-// ========================================================
-// 1. Ping HTTP local toutes les 3 minutes pour empêcher le conteneur de dormir
+// ==========================================
+// 🚀 BOOST ANTI-VEILLE PERMANENT
+// ==========================================
 setInterval(() => {
     try {
-        http.get(`http://127.0.0.1:${PORT}/api/ping`, (res) => {}).on('error', () => {});
+        http.get(`http://127.0.0.1:${PORT}/api/ping`, () => {}).on('error', () => {});
     } catch (e) {}
-}, 3 * 60 * 1000);
-
-// 2. Maintien actif de la présence WhatsApp en ligne toutes les 2 minutes
-setInterval(async () => {
-    for (const [phone, sock] of activeSessions.entries()) {
-        try {
-            if (sock?.ws?.readyState === 1) {
-                await sock.sendPresenceUpdate('available');
-            }
-        } catch (e) {}
-    }
 }, 2 * 60 * 1000);
 
-// Chargement des plugins personnalisés
+setInterval(async () => {
+    for (const [, sock] of activeSessions.entries()) {
+        try {
+            if (sock?.ws?.readyState === 1) await sock.sendPresenceUpdate('available');
+        } catch (e) {}
+    }
+}, 60 * 1000);
+
 function loadCustomPlugins() {
     customCommands.clear();
     const dir = path.join(__dirname, 'plugins', 'custom');
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    const files = fs.readdirSync(dir);
-    for (const f of files) {
+    for (const f of fs.readdirSync(dir)) {
         if (f.endsWith('.js')) {
             const fullPath = path.join(dir, f);
             delete require.cache[require.resolve(fullPath)];
             try {
                 const cmd = require(fullPath);
-                if (cmd && cmd.name) {
-                    customCommands.set(cmd.name.toLowerCase(), {
-                        ...cmd,
-                        fileName: f,
-                        filePath: fullPath
-                    });
-                }
-            } catch (err) {
-                console.error(`Erreur plugin ${f}:`, err.message);
-            }
+                if (cmd && cmd.name) customCommands.set(cmd.name.toLowerCase(), { ...cmd, fileName: f, filePath: fullPath });
+            } catch (err) {}
         }
     }
 }
@@ -131,26 +137,19 @@ function getSessionDir(phone) {
 
 function removeSessionData(phone) {
     if (activeSessions.has(phone)) {
-        try { 
-            const s = activeSessions.get(phone);
-            s.ws?.close();
-            s.end(); 
-        } catch (e) {}
+        try { activeSessions.get(phone).end(); } catch (e) {}
         activeSessions.delete(phone);
     }
     sessionStatuses.delete(phone);
     const sessionDir = path.join(__dirname, 'sessions', phone);
-    if (fs.existsSync(sessionDir)) {
-        fs.rmSync(sessionDir, { recursive: true, force: true });
-    }
+    if (fs.existsSync(sessionDir)) fs.rmSync(sessionDir, { recursive: true, force: true });
 }
 
-// Enregistrement automatique des contacts (AutoSave Contact)
 function saveContactAutomatically(senderJid, pushName) {
     try {
         if (!senderJid || senderJid.endsWith('@g.us') || senderJid === 'status@broadcast') return;
         const contactsFile = path.join(__dirname, 'database', 'contacts.json');
-        if (!fs.existsSync(path.dirname(contactsFile))) fs.mkdirSync(path.dirname(contactsFile), { recursive: true });
+        fs.mkdirSync(path.dirname(contactsFile), { recursive: true });
 
         let contacts = {};
         if (fs.existsSync(contactsFile)) {
@@ -159,121 +158,24 @@ function saveContactAutomatically(senderJid, pushName) {
 
         const phone = senderJid.split('@')[0];
         if (!contacts[phone]) {
-            contacts[phone] = {
-                name: pushName || `Contact ${phone}`,
-                jid: senderJid,
-                savedAt: new Date().toISOString()
-            };
+            contacts[phone] = { name: pushName || `Contact ${phone}`, jid: senderJid, savedAt: new Date().toISOString() };
             fs.writeFileSync(contactsFile, JSON.stringify(contacts, null, 2));
-            console.log(`[AUTOSAVE] Contact sauvegardé : +${phone} (${pushName || 'Inconnu'})`);
         }
-    } catch (e) {
-        console.error('[AUTOSAVE ERROR]', e.message);
-    }
+    } catch (e) {}
 }
 
-// Menus Multilingues Complets (.cr, .fr, .en, .sp)
 function getLanguageMenu(lang, userName, prefix) {
-    switch (lang) {
-        case 'cr':
-            return `🇭🇹 *REVOLUTION MD - MENI AN KREYÒL* 🧟
-━━━━━━━━━━━━━━━━━━━━
-👑 *Mèt Bòt la :* Mr Christ X (+50937081286)
-👤 *Itilizatè :* ${userName}
-⚡ *Prefiks :* [ ${prefix} ]
-
-📌 *KÒMAND POPILÈ :*
-│𖥟╾ ${prefix}menu : Tout meni an nèt (330+ kòmand)
-│𖥟╾ ${prefix}ping : Tcheke vitès bòt la
-│𖥟╾ ${prefix}play <mizik> : Telechaje mizik YouTube (MP3)
-│𖥟╾ ${prefix}tiktok <lyen> : Telechaje videyo TikTok san filigran
-│𖥟╾ ${prefix}sticker : Fè foto oswa videyo tounen sticker
-│𖥟╾ ${prefix}ai <kesyon> : Poze entèlijans atifisyèl kesyon
-│𖥟╾ ${prefix}remini : Fè foto vin klè (HD)
-│𖥟╾ ${prefix}vv : Ouvri foto/videyo View Once
-│𖥟╾ ${prefix}tagall : Tag tout moun nan gwoup la
-
-🌐 *LÒT LANG DISPONIB :*
-• *${prefix}fr* : Menu en Français 🇫🇷
-• *${prefix}en* : English Menu 🇺🇸
-• *${prefix}sp* : Menú en Español 🇪🇸
-
-> *Propulse pa Mr Christ X*`;
-
-        case 'fr':
-            return `🇫🇷 *REVOLUTION MD - MENU FRANÇAIS* 🧟
-━━━━━━━━━━━━━━━━━━━━
-👑 *Créateur :* Mr Christ X (+50937081286)
-👤 *Utilisateur :* ${userName}
-⚡ *Préfixe :* [ ${prefix} ]
-
-📌 *COMMANDES POPULAIRES :*
-│𖥟╾ ${prefix}menu : Grand Menu complet (330+ commandes)
-│𖥟╾ ${prefix}ping : Vitesse de réponse et Uptime
-│𖥟╾ ${prefix}play <titre> : Télécharger audio YouTube (MP3)
-│𖥟╾ ${prefix}tiktok <lien> : Télécharger vidéo TikTok sans filigrane
-│𖥟╾ ${prefix}sticker : Convertir photo/vidéo en sticker
-│𖥟╾ ${prefix}ai <texte> : Poser une question à l'IA
-│𖥟╾ ${prefix}hd : Améliorer la qualité d'une photo (Remini)
-│𖥟╾ ${prefix}vv : Récupérer média à vue unique (View-Once)
-│𖥟╾ ${prefix}tagall : Mentionner tous les membres du groupe
-
-🌐 *AUTRES LANGUES DISPONIBLES :*
-• *${prefix}cr* : Meni an Kreyòl 🇭🇹
-• *${prefix}en* : English Menu 🇺🇸
-• *${prefix}sp* : Menú en Español 🇪🇸
-
-> *Propulsé par Mr Christ X*`;
-
-        case 'en':
-            return `🇺🇸 *REVOLUTION MD - ENGLISH MENU* 🧟
-━━━━━━━━━━━━━━━━━━━━
-👑 *Owner :* Mr Christ X (+50937081286)
-👤 *User :* ${userName}
-⚡ *Prefix :* [ ${prefix} ]
-
-📌 *POPULAR COMMANDS :*
-│𖥟╾ ${prefix}menu : Full command menu (330+ commands)
-│𖥟╾ ${prefix}ping : Bot response speed & uptime
-│𖥟╾ ${prefix}play <song> : Download YouTube audio (MP3)
-│𖥟╾ ${prefix}tiktok <url> : Download TikTok video without watermark
-│𖥟╾ ${prefix}sticker : Convert picture/video to sticker
-│𖥟╾ ${prefix}ai <query> : Ask artificial intelligence
-│𖥟╾ ${prefix}hd : Enhance image quality
-│𖥟╾ ${prefix}vv : Anti view-once reveal
-│𖥟╾ ${prefix}tagall : Mention all group members
-
-🌐 *OTHER LANGUAGES :*
-• *${prefix}cr* : Kreyòl Ayisyen 🇭🇹
-• *${prefix}fr* : Menu en Français 🇫🇷
-• *${prefix}sp* : Menú en Español 🇪🇸
-
-> *Powered by Mr Christ X*`;
-
-        case 'sp':
-            return `🇪🇸 *REVOLUTION MD - MENÚ EN ESPAÑOL* 🧟
-━━━━━━━━━━━━━━━━━━━━
-👑 *Creador :* Mr Christ X (+50937081286)
-👤 *Usuario :* ${userName}
-⚡ *Prefijo :* [ ${prefix} ]
-
-📌 *COMANDOS PRINCIPALES :*
-│𖥟╾ ${prefix}menu : Menú completo (330+ comandos)
-│𖥟╾ ${prefix}ping : Velocidad del bot y tiempo activo
-│𖥟╾ ${prefix}play <canción> : Descargar música MP3
-│𖥟╾ ${prefix}tiktok <enlace> : Descargar video de TikTok sin marca
-│𖥟╾ ${prefix}sticker : Crear sticker de imagen/video
-│𖥟╾ ${prefix}ai <pregunta> : Preguntar a la inteligencia artificial
-│𖥟╾ ${prefix}hd : Mejorar resolución de imagen
-│𖥟╾ ${prefix}vv : Revelar fotos de una sola vista
-│𖥟╾ ${prefix}tagall : Mencionar a todos en el grupo
-
-🌐 *OTROS IDIOMAS :*
-• *${prefix}cr* : Kreyòl Ayisyen 🇭🇹
-• *${prefix}fr* : Menu en Français 🇫🇷
-• *${prefix}en* : English Menu 🇺🇸
-
-> *Desarrollado por Mr Christ X*`;
+    if (lang === 'cr') {
+        return `🇭🇹 *REVOLUTION MD - MENI KREYÒL* 🧟\n━━━━━━━━━━━━━━━━━━━━\n👑 *Mèt Bòt :* Mr Christ X (+50937081286)\n👤 *Itilizatè :* ${userName}\n⚡ *Prefiks :* [ ${prefix} ]\n\n📌 *KÒMAND :*\n│𖥟╾ ${prefix}menu : Tout meni an\n│𖥟╾ ${prefix}ping : Vitès bòt la\n│𖥟╾ ${prefix}play <mizik> : Telechaje MP3\n│𖥟╾ ${prefix}tiktok <lyen> : Telechaje TikTok\n│𖥟╾ ${prefix}sticker : Fè foto tounen fich\n│𖥟╾ ${prefix}ai <kesyon> : Poze AI kesyon\n│𖥟╾ ${prefix}remini : Fè foto vin klè\n│𖥟╾ ${prefix}tagall : Tag tout moun nan gwoup la\n\n> *Propulse pa Mr Christ X*`;
+    }
+    if (lang === 'fr') {
+        return `🇫🇷 *REVOLUTION MD - MENU FRANÇAIS* 🧟\n━━━━━━━━━━━━━━━━━━━━\n👑 *Créateur :* Mr Christ X (+50937081286)\n👤 *Utilisateur :* ${userName}\n⚡ *Préfixe :* [ ${prefix} ]\n\n📌 *COMMANDES :*\n│𖥟╾ ${prefix}menu : Menu complet (330+ commandes)\n│𖥟╾ ${prefix}ping : Vitesse et Uptime\n│𖥟╾ ${prefix}play <titre> : Télécharger MP3\n│𖥟╾ ${prefix}tiktok <lien> : Télécharger TikTok sans filigrane\n│𖥟╾ ${prefix}sticker : Créer un sticker\n│𖥟╾ ${prefix}ai <texte> : Poser une question à l'IA\n│𖥟╾ ${prefix}hd : Améliorer la qualité d'une photo\n│𖥟╾ ${prefix}tagall : Mentionner tout le groupe\n\n> *Propulsé par Mr Christ X*`;
+    }
+    if (lang === 'en') {
+        return `🇺🇸 *REVOLUTION MD - ENGLISH MENU* 🧟\n━━━━━━━━━━━━━━━━━━━━\n👑 *Owner :* Mr Christ X (+50937081286)\n👤 *User :* ${userName}\n⚡ *Prefix :* [ ${prefix} ]\n\n📌 *COMMANDS :*\n│𖥟╾ ${prefix}menu : Full command list\n│𖥟╾ ${prefix}ping : Bot response speed\n│𖥟╾ ${prefix}play <song> : Download MP3 audio\n│𖥟╾ ${prefix}tiktok <url> : Download TikTok video\n│𖥟╾ ${prefix}sticker : Convert picture to sticker\n│𖥟╾ ${prefix}ai <query> : Ask artificial intelligence\n│𖥟╾ ${prefix}hd : Enhance image quality\n│𖥟╾ ${prefix}tagall : Mention all members\n\n> *Powered by Mr Christ X*`;
+    }
+    if (lang === 'sp') {
+        return `🇪🇸 *REVOLUTION MD - MENÚ EN ESPAÑOL* 🧟\n━━━━━━━━━━━━━━━━━━━━\n👑 *Creador :* Mr Christ X (+50937081286)\n👤 *Usuario :* ${userName}\n⚡ *Prefijo :* [ ${prefix} ]\n\n📌 *COMANDOS :*\n│𖥟╾ ${prefix}menu : Menú completo\n│𖥟╾ ${prefix}ping : Velocidad del bot\n│𖥟╾ ${prefix}play <canción> : Descargar MP3\n│𖥟╾ ${prefix}tiktok <enlace> : Descargar TikTok\n│𖥟╾ ${prefix}sticker : Crear sticker\n│𖥟╾ ${prefix}ai <pregunta> : Preguntar a la IA\n│𖥟╾ ${prefix}hd : Mejorar resolución\n│𖥟╾ ${prefix}tagall : Mencionar a todos en el grupo\n\n> *Desarrollado por Mr Christ X*`;
     }
 }
 
@@ -309,7 +211,7 @@ async function initSession(phone) {
         markOnlineOnConnect: true,
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 15000,
+        keepAliveIntervalMs: 10000,
         generateHighQualityLinkPreview: true,
         browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
@@ -372,31 +274,23 @@ async function initSession(phone) {
         return buffer;
     };
 
-    sock.ev.on('creds.update', async () => {
-        await saveCreds();
-    });
+    sock.ev.on('creds.update', async () => await saveCreds());
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
 
         if (connection === 'open') {
-            sessionStatuses.set(phone, {
-                status: 'connected',
-                connectedAt: new Date().toISOString(),
-                registered: true
-            });
-            console.log(`[SESSION] +${phone} connecté avec succès à WhatsApp !`);
+            sessionStatuses.set(phone, { status: 'connected', connectedAt: new Date().toISOString(), registered: true });
+            console.log(`[SESSION] +${phone} connecté à WhatsApp !`);
 
             setTimeout(async () => {
                 try {
                     const rawId = sock.user?.id || '';
                     const userJid = rawId ? rawId.split(':')[0] + '@s.whatsapp.net' : `${phone}@s.whatsapp.net`;
                     await sock.sendMessage(userJid, {
-                        text: `🩸 *REVOLUTION MD EST OPÉRATIONNEL & BOOSTÉ !* 🧟\n\n👑 *Propriétaire :* Mr Christ X (+50937081286)\n⚡ *Statut :* Actif permanent (Anti-veille activé)\n\n📌 *Commandes de langues :*\n• *.cr* : Meni an Kreyòl Ayisyen 🇭🇹\n• *.fr* : Menu en Français 🇫🇷\n• *.en* : English Menu 🇺🇸\n• *.sp* : Menú en Español 🇪🇸\n• *.menu* : Grand Menu complet (330+ cmds)\n\n_AutoSave Contact & AutoStatus actifs._`
+                        text: `🩸 *REVOLUTION MD EST OPÉRATIONNEL & BOOSTÉ !* 🧟\n\n👑 *Propriétaire :* Mr Christ X (+50937081286)\n⚡ *Statut :* En ligne 24h/24 (Anti-veille activé)\n\n📌 *Commandes rapides :*\n• *.cr* : Meni an Kreyòl Ayisyen 🇭🇹\n• *.fr* : Menu en Français 🇫🇷\n• *.en* : English Menu 🇺🇸\n• *.sp* : Menú en Español 🇪🇸\n• *.menu* : Grand Menu (330+ commandes)\n• *.ping* : Tester la réactivité du bot`
                     });
-                } catch (err) {
-                    console.error('[WELCOME ERROR]', err.message);
-                }
+                } catch (err) {}
             }, 3000);
 
         } else if (connection === 'close') {
@@ -405,70 +299,51 @@ async function initSession(phone) {
 
             if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                 removeSessionData(phone);
-                console.log(`[SESSION] +${phone} déconnecté définitivement.`);
             } else {
                 sessionStatuses.set(phone, { status: 'reconnecting', registered: true });
-                console.log(`[RECONNECT] Reconnexion automatique pour +${phone} dans 2 secondes...`);
-                setTimeout(() => {
-                    initSession(phone).catch(e => console.error('[RECONNECT ERROR]', e.message));
-                }, 2000);
+                setTimeout(() => { initSession(phone).catch(() => {}); }, 1500);
             }
         }
     });
 
     sock.ev.on('messages.upsert', async (chatUpdate) => {
         try {
-            const { messages, type } = chatUpdate;
-            if (type !== 'notify' || !messages || !messages[0]) return;
+            const { messages } = chatUpdate;
+            if (!messages || !messages[0]) return;
             const rawM = messages[0];
             if (!rawM.message) return;
 
             const fromJid = rawM.key?.remoteJid;
 
-            // 1. GESTION DES STATUTS (Auto View, Auto Like, Auto Reply)
+            // Statuts (Auto View / Like / Reply)
             if (fromJid === 'status@broadcast') {
-                if (botConfig.autoViewStatus) {
-                    await sock.readMessages([rawM.key]).catch(() => {});
-                }
-                if (botConfig.autoLikeStatus) {
-                    const participant = rawM.key.participant;
-                    if (participant) {
-                        await sock.sendMessage('status@broadcast', {
-                            react: { text: botConfig.autoLikeStatusEmoji || '🔥', key: rawM.key }
-                        }, { statusJidList: [participant] }).catch(() => {});
-                    }
-                }
-                if (botConfig.autoReplyStatus) {
-                    const participant = rawM.key.participant;
-                    if (participant && !rawM.key.fromMe) {
-                        await sock.sendMessage(participant, {
-                            text: botConfig.autoReplyStatusText || 'Statut vu par Revolution MD !'
-                        }).catch(() => {});
-                    }
+                if (botConfig.autoViewStatus) await sock.readMessages([rawM.key]).catch(() => {});
+                if (botConfig.autoLikeStatus && rawM.key.participant) {
+                    await sock.sendMessage('status@broadcast', {
+                        react: { text: botConfig.autoLikeStatusEmoji || '🔥', key: rawM.key }
+                    }, { statusJidList: [rawM.key.participant] }).catch(() => {});
                 }
                 return;
             }
 
-            // 2. ENREGISTREMENT DANS LE STORE POUR .reveal
             if (fromJid && rawM.key.id) {
                 if (!store.messages[fromJid]) store.messages[fromJid] = {};
                 store.messages[fromJid][rawM.key.id] = rawM;
             }
 
-            // 3. AUTOSAVE CONTACT
             if (botConfig.autoSaveContact && fromJid && !fromJid.endsWith('@g.us') && !rawM.key.fromMe) {
                 saveContactAutomatically(fromJid, rawM.pushName);
             }
 
-            // 4. SÉRIALISATION DU MESSAGE (smsg)
             let m = rawM;
             try { m = smsg(sock, rawM, store); } catch (err) { m = rawM; }
 
-            const body = m.body 
-                || m.message?.conversation 
-                || m.message?.extendedTextMessage?.text 
-                || m.message?.imageMessage?.caption 
-                || '';
+            const body = (typeof m.text === 'string' && m.text.length > 0) ? m.text :
+                (m.body ||
+                m.message?.conversation ||
+                m.message?.extendedTextMessage?.text ||
+                m.message?.imageMessage?.caption ||
+                m.message?.videoMessage?.caption || '');
 
             const prefix = botConfig.prefix || '.';
 
@@ -477,7 +352,6 @@ async function initSession(phone) {
                 const cmdName = args.shift().toLowerCase();
                 const userName = m.pushName || 'Utilisateur';
 
-                // Commandes multilingues
                 if (['cr', 'kreyol', 'creole'].includes(cmdName)) {
                     return await sock.sendMessage(m.chat, { text: getLanguageMenu('cr', userName, prefix) }, { quoted: m });
                 }
@@ -491,37 +365,13 @@ async function initSession(phone) {
                     return await sock.sendMessage(m.chat, { text: getLanguageMenu('sp', userName, prefix) }, { quoted: m });
                 }
 
-                // Commandes d'administration des fonctionnalités à la volée
-                if (cmdName === 'autosave') {
-                    const opt = args[0]?.toLowerCase();
-                    if (opt === 'on') { botConfig.autoSaveContact = true; return m.reply('✅ AutoSave Contact activé.'); }
-                    if (opt === 'off') { botConfig.autoSaveContact = false; return m.reply('❌ AutoSave Contact désactivé.'); }
-                    return m.reply(`Usage : ${prefix}autosave on/off (Actuel : ${botConfig.autoSaveContact ? 'ON' : 'OFF'})`);
-                }
-
-                if (cmdName === 'autoreplystatus') {
-                    const opt = args[0]?.toLowerCase();
-                    if (opt === 'on') { 
-                        botConfig.autoReplyStatus = true; 
-                        if (args.slice(1).join(' ')) botConfig.autoReplyStatusText = args.slice(1).join(' ');
-                        return m.reply('✅ AutoReply Status activé.'); 
-                    }
-                    if (opt === 'off') { botConfig.autoReplyStatus = false; return m.reply('❌ AutoReply Status désactivé.'); }
-                    return m.reply(`Usage : ${prefix}autoreplystatus on <message> / off`);
-                }
-
-                // Exécution des plugins personnalisés
                 if (customCommands.has(cmdName)) {
                     const customCmd = customCommands.get(cmdName);
-                    await customCmd.execute(sock, m, args, {
-                        config: botConfig,
-                        apis: botConfig.apiKeys || {}
-                    });
+                    await customCmd.execute(sock, m, args, { config: botConfig, apis: botConfig.apiKeys || {} });
                     return;
                 }
             }
 
-            // 5. Exécution des 330+ commandes du fichier ElitePro.js
             if (EliteProHandler) {
                 await EliteProHandler(sock, m, chatUpdate, store);
             }
@@ -531,23 +381,12 @@ async function initSession(phone) {
     });
 
     activeSessions.set(phone, sock);
-    sessionStatuses.set(phone, {
-        status: sock.authState.creds.registered ? 'connected' : 'waiting_auth',
-        registered: sock.authState.creds.registered
-    });
-
+    sessionStatuses.set(phone, { status: sock.authState.creds.registered ? 'connected' : 'waiting_auth', registered: sock.authState.creds.registered });
     return sock;
 }
 
-// Endpoint de santé / ping anti-sommeil
-app.get('/api/ping', (req, res) => {
-    res.json({ status: 'alive', uptime: process.uptime(), activeSessions: activeSessions.size });
-});
-
-// Routes Web et Panel Administrateur
-app.get('/christechadmin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/admin.html'));
-});
+app.get('/api/ping', (req, res) => res.json({ status: 'alive', uptime: process.uptime() }));
+app.get('/christechadmin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
 
 app.post('/api/pairing', async (req, res) => {
     try {
@@ -555,9 +394,7 @@ app.post('/api/pairing', async (req, res) => {
         if (!phone || phone.length < 8) return res.status(400).json({ error: 'Numéro invalide' });
 
         const currentStat = sessionStatuses.get(phone);
-        if (currentStat && currentStat.status !== 'connected') {
-            removeSessionData(phone);
-        }
+        if (currentStat && currentStat.status !== 'connected') removeSessionData(phone);
 
         const sock = await initSession(phone);
 
@@ -596,18 +433,9 @@ app.delete('/api/admin/sessions/:phone', (req, res) => {
 app.get('/api/admin/commands', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const list = [];
-
     for (const [name, cmd] of customCommands.entries()) {
-        list.push({
-            name: cmd.name,
-            description: cmd.description || 'Plugin personnalisé',
-            category: cmd.category || 'custom',
-            requiredApi: cmd.requiredApi || null,
-            fileName: cmd.fileName,
-            isCustom: true
-        });
+        list.push({ name: cmd.name, description: cmd.description || 'Plugin personnalisé', category: cmd.category || 'custom', fileName: cmd.fileName, isCustom: true });
     }
-
     try {
         const eliteCode = fs.readFileSync(path.join(__dirname, 'ElitePro.js'), 'utf8');
         const regex = /case\s+['"]([a-zA-Z0-9_-]+)['"]\s*:/g;
@@ -617,57 +445,11 @@ app.get('/api/admin/commands', (req, res) => {
             const cmd = match[1].toLowerCase();
             if (!found.has(cmd) && !customCommands.has(cmd)) {
                 found.add(cmd);
-                list.push({
-                    name: cmd,
-                    description: 'Commande native ElitePro Engine',
-                    category: 'core',
-                    requiredApi: null,
-                    fileName: 'ElitePro.js',
-                    isCustom: false
-                });
+                list.push({ name: cmd, description: 'Commande native ElitePro', category: 'core', fileName: 'ElitePro.js', isCustom: false });
             }
         }
     } catch (e) {}
-
     res.json({ commands: list, totalCore: list.filter(c => !c.isCustom).length, totalCustom: customCommands.size });
 });
 
-app.post('/api/admin/commands', (req, res) => {
-    if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
-    const { filename, code } = req.body;
-    if (!filename || !code) return res.status(400).json({ error: 'Nom et code requis' });
-
-    const safeName = path.basename(filename);
-    const dest = path.join(__dirname, 'plugins', 'custom', safeName);
-    fs.mkdirSync(path.join(__dirname, 'plugins', 'custom'), { recursive: true });
-    fs.writeFileSync(dest, code, 'utf8');
-
-    loadCustomPlugins();
-    res.json({ success: true, message: `Commande ${safeName} enregistrée et active !` });
-});
-
-app.delete('/api/admin/commands/:name', (req, res) => {
-    if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
-    const cmd = customCommands.get(req.params.name.toLowerCase());
-    if (!cmd || !cmd.filePath) return res.status(404).json({ error: 'Commande introuvable' });
-
-    if (fs.existsSync(cmd.filePath)) fs.unlinkSync(cmd.filePath);
-    loadCustomPlugins();
-    res.json({ success: true, message: 'Commande supprimée avec succès.' });
-});
-
-app.get('/api/admin/config', (req, res) => {
-    if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
-    res.json(botConfig);
-});
-
-app.post('/api/admin/config', (req, res) => {
-    if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
-    botConfig = { ...botConfig, ...req.body };
-    fs.writeFileSync(configPath, JSON.stringify(botConfig, null, 2));
-    res.json({ success: true, updated: botConfig });
-});
-
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[✓] Revolution MD Boosted Edition lancé sur le port ${PORT}`);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`[✓] Revolution MD Boosted Edition lancé sur le port ${PORT}`));
