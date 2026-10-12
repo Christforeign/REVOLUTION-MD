@@ -9724,13 +9724,21 @@ ${readmore}┏━━━━━━━━━━━━━━━❍
 > ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ`; 
 const reactions = ["✅", "🔥", "😎", "👌", "😏", "🌟", "⚡", "💥", "🎉", "🧘", "🥺", "😉", "🔔", "🤫"];
 const randomReaction = reactions[Math.floor(Math.random() * reactions.length)];
+
 await sock.sendMessage(m.chat, {
     react: { text: randomReaction, key: m.key } 
-  }); 
-await sock.sendMessage(m.chat, {
-  image: RevolutionMDpic,
-  caption: elitemenuoh
-}, { quoted: m });
+}); 
+
+if (typeof RevolutionMDpic !== 'undefined' && Buffer.isBuffer(RevolutionMDpic) && RevolutionMDpic.length > 500) {
+    await sock.sendMessage(m.chat, {
+        image: RevolutionMDpic,
+        caption: elitemenuoh
+    }, { quoted: m });
+} else {
+    await sock.sendMessage(m.chat, {
+        text: elitemenuoh
+    }, { quoted: m });
+}
 break
 }
 } catch (err) {
