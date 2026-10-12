@@ -1,4 +1,4 @@
-require('dotenv').config();
+try { require('dotenv').config(); } catch (e) {}
 const fs = require('fs');
 
 // Paramètres de contact & identité
