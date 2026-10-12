@@ -26,19 +26,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 🌐 SERVEUR WEB PRIORITAIRE (Empêche toute coupure de l'URL)
 app.get('/api/ping', (req, res) => res.json({ status: 'alive', uptime: process.uptime() }));
 app.get('/christechadmin', (req, res) => {
     const adminPath = path.join(__dirname, 'public/admin.html');
     if (fs.existsSync(adminPath)) return res.sendFile(adminPath);
-    res.send('Admin panel en cours de chargement...');
+    res.send('Admin panel en ligne.');
 });
 
 const activeSessions = new Map();
 const sessionStatuses = new Map();
-const loadedCommands = new Map();
 
-// Configuration
+// Configuration globale
 let botConfig = {
     botName: 'Revolution MD',
     ownerName: 'Mr Christ X',
@@ -60,31 +58,7 @@ try {
     }
 } catch (e) {}
 
-// 🚀 CHARGEMENT SÉCURISÉ DU DOSSIER commands/ SANS RISQUE DE CRASH
-function loadKnightCommands() {
-    loadedCommands.clear();
-    const cmdDir = path.join(__dirname, 'commands');
-    if (!fs.existsSync(cmdDir)) return;
-
-    const files = fs.readdirSync(cmdDir);
-    for (const file of files) {
-        if (file.endsWith('.js')) {
-            const cmdName = file.replace('.js', '').toLowerCase();
-            try {
-                const fullPath = path.join(cmdDir, file);
-                delete require.cache[require.resolve(fullPath)];
-                const mod = require(fullPath);
-                loadedCommands.set(cmdName, mod);
-            } catch (err) {
-                console.warn(`[CMD SKIP] ${file} non chargé (${err.message}) - Fallback activé.`);
-            }
-        }
-    }
-    console.log(`[✓] ${loadedCommands.size} modules de commande initialisés.`);
-}
-loadKnightCommands();
-
-// 🚀 ENGINE ANTI-VEILLE (Toutes les 2 minutes)
+// Anti-veille
 setInterval(() => {
     try { http.get(`http://127.0.0.1:${PORT}/api/ping`, () => {}).on('error', () => {}); } catch (e) {}
 }, 2 * 60 * 1000);
@@ -122,7 +96,7 @@ function saveContact(senderJid, pushName) {
         }
         const phone = senderJid.split('@')[0];
         if (!contacts[phone]) {
-            contacts[phone] = { name: pushName || `Pote ${phone}`, jid: senderJid, savedAt: new Date().toISOString() };
+            contacts[phone] = { name: pushName || `Contact ${phone}`, jid: senderJid, savedAt: new Date().toISOString() };
             fs.writeFileSync(contactsFile, JSON.stringify(contacts, null, 2));
         }
     } catch (e) {}
@@ -153,6 +127,18 @@ async function callKnightAPI(endpoint, params = {}) {
     } catch (e) {
         return null;
     }
+}
+
+// Extraction propre du texte de n'importe quel type de message WhatsApp
+function getMessageText(m) {
+    if (!m || !m.message) return '';
+    return m.message.conversation ||
+        m.message.extendedTextMessage?.text ||
+        m.message.imageMessage?.caption ||
+        m.message.videoMessage?.caption ||
+        m.message.buttonsResponseMessage?.selectedButtonId ||
+        m.message.listResponseMessage?.singleSelectReply?.selectedRowId ||
+        m.message.templateButtonReplyMessage?.selectedId || '';
 }
 
 async function initSession(phone) {
@@ -216,7 +202,7 @@ async function initSession(phone) {
                     const rawId = sock.user?.id || '';
                     const userJid = rawId ? rawId.split(':')[0] + '@s.whatsapp.net' : `${phone}@s.whatsapp.net`;
                     await sock.sendMessage(userJid, {
-                        text: `⚡ *REVOLUTION MD — POTE DE RUE* 🧢\n\n👑 *Boss :* Mr Christ X (+50937081286)\n🔥 *Statut :* Actif 24h/24 sans mise en veille.\n\n💬 *Tape :* .menu pour sortir l'arsenal.`
+                        text: `⚡ *REVOLUTION MD — EN LIGNE* 🧢\n\n👑 *Boss :* Mr Christ X (+50937081286)\n🔥 *Statut :* Actif 24h/24.\n\n💬 *Tape :* .ping ou .menu pour tester !`
                     });
                 } catch (e) {}
             }, 3000);
@@ -256,17 +242,18 @@ async function initSession(phone) {
                 saveContact(fromJid, m.pushName);
             }
 
-            const textMessage = m.message?.conversation ||
-                m.message?.extendedTextMessage?.text ||
-                m.message?.imageMessage?.caption ||
-                m.message?.videoMessage?.caption || '';
+            // Récupération universelle du texte
+            const textMessage = getMessageText(m).trim();
+            if (!textMessage) return;
 
             const prefix = botConfig.prefix || '.';
             const isCommand = textMessage.startsWith(prefix);
-            const args = isCommand ? textMessage.slice(prefix.length).trim().split(/\s+/) : textMessage.trim().split(/\s+/);
+            const args = isCommand ? textMessage.slice(prefix.length).trim().split(/\s+/) : textMessage.split(/\s+/);
             const cmd = isCommand ? args.shift().toLowerCase() : '';
             const fullQuery = args.join(' ');
             const userName = m.pushName || 'Poto';
+
+            console.log(`[MSG REÇU] Chat: ${fromJid} | Texte: "${textMessage}" | IsCmd: ${isCommand} | Cmd: "${cmd}"`);
 
             // 💘 MODE FLIRT AUTOMATIQUE (DANS LE CHAT DÉDIÉ)
             if (!isCommand && botConfig.flirtChats.includes(fromJid) && !m.key.fromMe) {
@@ -279,10 +266,25 @@ async function initSession(phone) {
 
             if (!isCommand) return;
 
+            // Réaction emoji pour confirmer la prise en compte de la commande
+            await sock.sendMessage(fromJid, { react: { text: '⚡', key: m.key } }).catch(() => {});
+
             // ==========================================
-            // 🎯 ROUTEUR DE COMMANDES PROPRIÉTAIRE & FIABLE
+            // 🎯 COMMANDES DU BOT
             // ==========================================
             switch (cmd) {
+                case 'ping': {
+                    return await sock.sendMessage(fromJid, {
+                        text: `⚡ *PONG !* Le bot est actif, vitesse instantanée. Prêt à découper frérot.`
+                    }, { quoted: m });
+                }
+
+                case 'alive': {
+                    return await sock.sendMessage(fromJid, {
+                        text: `🩸 *REVOLUTION MD EST BIEN VIVANT !*\n\n👑 *Boss :* Mr Christ X (+50937081286)\n⚡ *Statut :* En ligne 24h/24\n🛠️ *Préfixe :* [ ${prefix} ]`
+                    }, { quoted: m });
+                }
+
                 case 'menu':
                 case 'help': {
                     const menuTxt = `┏━━━ ⚡ *REVOLUTION MD* ⚡ ━━━❍
@@ -305,7 +307,7 @@ async function initSession(phone) {
 │𖥟╾ ${prefix}drague <question> : Coaching drague par l'IA
 
 📥 *TÉLÉCHARGEMENT (KNIGHT API) :*
-│𖥟╾ ${prefix}tiktok <lien> : Vidéo TikTok sans watermark
+│𖥟╾ ${prefix}tiktok <lien> : Vidéo TikTok sans filigrane
 │𖥟╾ ${prefix}play <titre> : Télécharger audio YouTube (MP3)
 │𖥟╾ ${prefix}video <titre> : Télécharger vidéo YouTube (MP4)
 │𖥟╾ ${prefix}ig <lien> : Instagram Reel / Post
@@ -318,13 +320,13 @@ async function initSession(phone) {
 │𖥟╾ ${prefix}gpt <texte> : Modèle GPT
 │𖥟╾ ${prefix}gemini <texte> : Modèle Gemini
 
-🛠️ *OUTILS & STATUT :*
+🛠️ *OUTILS & GROUPES :*
 │𖥟╾ ${prefix}ss <url> : Capture d'écran de site
 │𖥟╾ ${prefix}tts <texte> : Synthèse vocale
 │𖥟╾ ${prefix}qr <texte> : Générer un QR Code
 │𖥟╾ ${prefix}tagall : Mentionner tout le monde
 │𖥟╾ ${prefix}ping : Vitesse de frappe du bot
-│𖥟╾ ${prefix}alive : Vérification 24h/24
+│𖥟╾ ${prefix}alive : Vérification du bot
 
 > *Propulsé par Mr Christ X — Fais pas le malin.*`;
                     return await sock.sendMessage(fromJid, { text: menuTxt }, { quoted: m });
@@ -338,7 +340,7 @@ async function initSession(phone) {
 
                 case 'roast': {
                     const roastApi = await callKnightAPI('/api/fun/roast');
-                    const chosen = roastApi || "T'as tellement zéro repartie que même Siri te laisse en vu !";
+                    const chosen = roastApi || "T'as tellement zéro répartie que même Siri te laisse en vu !";
                     return await sock.sendMessage(fromJid, { text: `🔥 *Cuisiné bien saignant :*\n\n${chosen}` }, { quoted: m });
                 }
 
@@ -381,7 +383,6 @@ async function initSession(phone) {
 
                 case 'tiktok': {
                     if (!fullQuery) return await sock.sendMessage(fromJid, { text: "Mets le lien TikTok frérot !" }, { quoted: m });
-                    await sock.sendMessage(fromJid, { react: { text: '⏳', key: m.key } });
                     const resTk = await callKnightAPI('/api/download/tiktok', { url: fullQuery });
                     if (resTk && (resTk.download || resTk.url || resTk.video)) {
                         const dlUrl = resTk.download || resTk.url || resTk.video;
@@ -395,7 +396,6 @@ async function initSession(phone) {
                 case 'play':
                 case 'ytmp3': {
                     if (!fullQuery) return await sock.sendMessage(fromJid, { text: "Donne le titre du son ou le lien YouTube !" }, { quoted: m });
-                    await sock.sendMessage(fromJid, { react: { text: '🎵', key: m.key } });
                     const resYt = await callKnightAPI('/api/ytmp3', { query: fullQuery }) || await callKnightAPI('/api/download/ytaudio', { url: fullQuery });
                     if (resYt && (resYt.download || resYt.url)) {
                         await sock.sendMessage(fromJid, { audio: { url: resYt.download || resYt.url }, mimetype: 'audio/mpeg' }, { quoted: m });
@@ -408,7 +408,6 @@ async function initSession(phone) {
                 case 'video':
                 case 'ytmp4': {
                     if (!fullQuery) return await sock.sendMessage(fromJid, { text: "Donne le titre ou le lien vidéo !" }, { quoted: m });
-                    await sock.sendMessage(fromJid, { react: { text: '📽️', key: m.key } });
                     const resYtv = await callKnightAPI('/api/ytmp4', { query: fullQuery }) || await callKnightAPI('/api/download/ytmp4', { url: fullQuery });
                     if (resYtv && (resYtv.download || resYtv.url)) {
                         await sock.sendMessage(fromJid, { video: { url: resYtv.download || resYtv.url }, caption: "🎬 *Vidéo téléchargée.*" }, { quoted: m });
@@ -511,30 +510,6 @@ async function initSession(phone) {
                     for (const mem of members) tagText += `👉 @${mem.split('@')[0]}\n`;
                     return await sock.sendMessage(fromJid, { text: tagText, mentions: members }, { quoted: m });
                 }
-
-                case 'ping': {
-                    return await sock.sendMessage(fromJid, { text: `⚡ *PONG !* 0.2ms. Réponse instantanée.` }, { quoted: m });
-                }
-
-                case 'alive': {
-                    return await sock.sendMessage(fromJid, { text: `🩸 *REVOLUTION MD EST CONNECTÉ !*\nBoss : Mr Christ X (+50937081286)\nSystème en ligne 24h/24.` }, { quoted: m });
-                }
-
-                default: {
-                    // Fallback d'exécution si la commande existe dans le dossier commands/
-                    if (loadedCommands.has(cmd)) {
-                        const commandHandler = loadedCommands.get(cmd);
-                        const fn = commandHandler[`${cmd}Command`] || commandHandler.default || commandHandler;
-                        if (typeof fn === 'function') {
-                            try {
-                                await fn(sock, fromJid, m);
-                            } catch (e) {
-                                console.error(`Erreur exécution module ${cmd}:`, e.message);
-                            }
-                        }
-                    }
-                    break;
-                }
             }
         } catch (err) {
             console.error('[DISPATCH ERROR] :', err.message);
@@ -546,7 +521,6 @@ async function initSession(phone) {
     return sock;
 }
 
-// 📱 API PAIRING & GESTION SESSIONS
 app.post('/api/pairing', async (req, res) => {
     try {
         const phone = (req.body.phone || '').replace(/[^0-9]/g, '');
@@ -589,4 +563,4 @@ app.delete('/api/admin/sessions/:phone', (req, res) => {
     res.json({ success: true, message: `Session ${phone} supprimée.` });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`[✓] Revolution MD (Knight Engine) lancé avec succès sur le port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`[✓] Revolution MD (Knight Engine) en ligne sur le port ${PORT}`));
