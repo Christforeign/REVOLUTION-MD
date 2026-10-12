@@ -1,6 +1,6 @@
+try { require('dotenv').config(); } catch (e) {}
 require('./config');
 const { hookWASocket } = require('./brand');
-try { require('dotenv').config(); } catch (e) {}
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -15,12 +15,11 @@ const {
     makeCacheableSignalKeyStore
 } = require('baileys');
 
-// Chargement du moteur de commandes d'ElitePro (332 commandes natives)
 let EliteProHandler;
 try {
     EliteProHandler = require('./ElitePro');
 } catch (e) {
-    console.error('[!] Erreur chargement ElitePro.js :', e);
+    console.error('[!] Erreur chargement ElitePro.js :', e.message);
 }
 
 const app = express();
@@ -31,12 +30,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Stockage des sessions actives en mémoire
-const activeSessions = new Map(); // phone -> sock
-const sessionStatuses = new Map(); // phone -> { status, connectedAt, registered }
-const customCommands = new Map(); // name -> { execute, description, category, requiredApi, fileName, filePath }
+const activeSessions = new Map();
+const sessionStatuses = new Map();
+const customCommands = new Map();
 
-// Charger les commandes personnalisées depuis plugins/custom
+// Charger les plugins custom
 function loadCustomPlugins() {
     customCommands.clear();
     const dir = path.join(__dirname, 'plugins', 'custom');
@@ -70,7 +68,19 @@ function getSessionDir(phone) {
     return dir;
 }
 
-// Fonction d'initialisation de session sans saisie en console
+// Supprimer proprement une session du disque et de la mémoire
+function removeSessionData(phone) {
+    if (activeSessions.has(phone)) {
+        try { activeSessions.get(phone).end(); } catch (e) {}
+        activeSessions.delete(phone);
+    }
+    sessionStatuses.delete(phone);
+    const sessionDir = path.join(__dirname, 'sessions', phone);
+    if (fs.existsSync(sessionDir)) {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+    }
+}
+
 async function initSession(phone) {
     if (activeSessions.has(phone)) return activeSessions.get(phone);
 
@@ -79,7 +89,7 @@ async function initSession(phone) {
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
     const msgRetryCounterCache = new NodeCache();
 
-    const sock = makeWaSocket({
+    let sock = makeWaSocket({
         version,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
@@ -92,6 +102,8 @@ async function initSession(phone) {
         markOnlineOnConnect: true,
         browser: ['Ubuntu', 'Chrome', '20.0.04']
     });
+
+    sock = hookWASocket(sock);
 
     sock.ev.on('creds.update', saveCreds);
 
@@ -107,8 +119,7 @@ async function initSession(phone) {
         } else if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             if (statusCode === DisconnectReason.loggedOut) {
-                activeSessions.delete(phone);
-                sessionStatuses.delete(phone);
+                removeSessionData(phone);
                 console.log(`[SESSION] +${phone} déconnecté définitivement.`);
             } else {
                 sessionStatuses.set(phone, { status: 'reconnecting', registered: true });
@@ -117,7 +128,6 @@ async function initSession(phone) {
         }
     });
 
-    // Branchement des messages sur ElitePro + Commandes custom
     sock.ev.on('messages.upsert', async (chatUpdate) => {
         try {
             const { messages, type } = chatUpdate;
@@ -125,13 +135,13 @@ async function initSession(phone) {
             const m = messages[0];
             if (!m.message) return;
 
-            // 1. Exécution des commandes custom du panel admin en priorité
             const body = m.message?.conversation 
                 || m.message?.extendedTextMessage?.text 
                 || m.message?.imageMessage?.caption 
                 || '';
             
-            const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+            let config = { prefix: '.' };
+            try { config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')); } catch (e) {}
             const prefix = config.prefix || '.';
 
             if (body && body.startsWith(prefix)) {
@@ -144,11 +154,10 @@ async function initSession(phone) {
                         config,
                         apis: config.apiKeys || {}
                     });
-                    return; // Si géré par un plugin custom, on s'arrête
+                    return;
                 }
             }
 
-            // 2. Exécution du moteur complet ElitePro (332 commandes natives)
             if (EliteProHandler) {
                 await EliteProHandler(sock, m, chatUpdate, null);
             }
@@ -163,21 +172,25 @@ async function initSession(phone) {
         registered: sock.authState.creds.registered
     });
 
-    sock = hookWASocket(sock);
     return sock;
 }
 
-// Redirection vers le panel admin
 app.get('/christechadmin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
-// Endpoint Pairing Code Web sans saisie console
+// Endpoint Pairing Code Web avec auto-nettoyage en cas d'échec
 app.post('/api/pairing', async (req, res) => {
     try {
         const phone = (req.body.phone || '').replace(/[^0-9]/g, '');
         if (!phone || phone.length < 8) {
             return res.status(400).json({ error: 'Numéro invalide (ex: 50937081286)' });
+        }
+
+        // Si la session existait mais n'était PAS réellement enregistrée/connectée, on la réinitialise
+        const currentStat = sessionStatuses.get(phone);
+        if (currentStat && currentStat.status !== 'connected') {
+            removeSessionData(phone);
         }
 
         const sock = await initSession(phone);
@@ -190,8 +203,8 @@ app.post('/api/pairing', async (req, res) => {
                     console.log(`[PAIRING WEB] Code pour ${phone} : ${formatted}`);
                     return res.json({ code: formatted });
                 } catch (err) {
-                    console.error('[PAIRING ERROR]', err);
-                    return res.status(500).json({ error: 'Échec génération Baileys. Réessayez dans 10 secondes.' });
+                    removeSessionData(phone);
+                    return res.status(500).json({ error: 'Échec Baileys. Réessayez dans 10 secondes.' });
                 }
             }, 6000);
         } else {
@@ -213,11 +226,20 @@ app.get('/api/admin/sessions', (req, res) => {
     res.json({ sessions: list });
 });
 
+// SUPPRIMER UNE SESSION DIRECTEMENT DEPUIS L'ADMIN
+app.delete('/api/admin/sessions/:phone', (req, res) => {
+    if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
+    const phone = req.params.phone.replace(/[^0-9]/g, '');
+    removeSessionData(phone);
+    res.json({ success: true, message: `Session ${phone} supprimée.` });
+});
+
+// EXTRACTION DYNAMIQUE DE TOUTES LES COMMANDES NATIVES + CUSTOM
 app.get('/api/admin/commands', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const list = [];
     
-    // Commandes custom
+    // 1. Commandes custom (modifiables)
     for (const [name, cmd] of customCommands.entries()) {
         list.push({
             name: cmd.name,
@@ -229,31 +251,35 @@ app.get('/api/admin/commands', (req, res) => {
         });
     }
 
-    // Commandes natives d'ElitePro
-    const eliteSamples = [
-        'ping', 'alive', 'tiktok', 'play', 'ytmp3', 'ytmp4', 'mediafire', 'wallpaper',
-        'gpt', 'ai', 'truth', 'dare', 'lyrics', 'sticker', 'take', 'tourl', 'hd', 'remini',
-        'tagall', 'hidetag', 'kick', 'promote', 'demote', 'warn', 'warnings', 'resetlink',
-        'weather', 'define', 'savecontact', 'quotes', 'fact', 'topmembers'
-    ];
-    for (const c of eliteSamples) {
-        list.push({
-            name: c,
-            description: 'Commande native ElitePro Engine',
-            category: 'elitepro_core',
-            requiredApi: null,
-            fileName: 'ElitePro.js',
-            isCustom: false
-        });
-    }
+    // 2. Scan complet du fichier ElitePro.js pour lister les 330+ commandes réelles
+    try {
+        const eliteCode = fs.readFileSync(path.join(__dirname, 'ElitePro.js'), 'utf8');
+        const regex = /case\s+['"]([a-zA-Z0-9_-]+)['"]\s*:/g;
+        let match;
+        const found = new Set();
+        while ((match = regex.exec(eliteCode)) !== null) {
+            const cmd = match[1].toLowerCase();
+            if (!found.has(cmd) && !customCommands.has(cmd)) {
+                found.add(cmd);
+                list.push({
+                    name: cmd,
+                    description: 'Commande native ElitePro Engine',
+                    category: 'core',
+                    requiredApi: null,
+                    fileName: 'ElitePro.js',
+                    isCustom: false
+                });
+            }
+        }
+    } catch (e) {}
 
-    res.json({ commands: list, totalCore: 332, totalCustom: customCommands.size });
+    res.json({ commands: list, totalCore: list.filter(c => !c.isCustom).length, totalCustom: customCommands.size });
 });
 
 app.get('/api/admin/commands/:name', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const cmd = customCommands.get(req.params.name.toLowerCase());
-    if (!cmd || !cmd.filePath) return res.status(404).json({ error: 'Commande introuvable ou commande native non modifiable ici.' });
+    if (!cmd || !cmd.filePath) return res.status(404).json({ error: 'Commande introuvable ou commande native du core.' });
 
     const code = fs.readFileSync(cmd.filePath, 'utf8');
     res.json({
@@ -270,7 +296,6 @@ app.post('/api/admin/commands', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const { filename, code } = req.body;
     if (!filename || !code) return res.status(400).json({ error: 'Nom et code requis' });
-    if (!filename.endsWith('.js')) return res.status(400).json({ error: 'Extension .js requise' });
 
     const safeName = path.basename(filename);
     const dest = path.join(__dirname, 'plugins', 'custom', safeName);
@@ -293,13 +318,15 @@ app.delete('/api/admin/commands/:name', (req, res) => {
 
 app.get('/api/admin/config', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
-    const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+    let config = {};
+    try { config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')); } catch (e) {}
     res.json(config);
 });
 
 app.post('/api/admin/config', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
-    const current = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+    let current = {};
+    try { current = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')); } catch (e) {}
     const updated = { ...current, ...req.body };
     fs.writeFileSync(path.join(__dirname, 'config.json'), JSON.stringify(updated, null, 2));
     res.json({ success: true, updated });
@@ -307,6 +334,4 @@ app.post('/api/admin/config', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`[✓] Revolution MD Ultimate Fusion lancé sur le port ${PORT}`);
-    console.log(`[i] Pairing Interface Zombie : http://localhost:${PORT}`);
-    console.log(`[i] Panel Administrateur : http://localhost:${PORT}/christechadmin`);
 });
