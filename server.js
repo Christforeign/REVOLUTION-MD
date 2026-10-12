@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const pino = require('pino');
 const NodeCache = require('node-cache');
+const { smsg } = require('./lib/myfunc');
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -15,11 +16,12 @@ const {
     makeCacheableSignalKeyStore
 } = require('baileys');
 
-let EliteProHandler;
+let EliteProHandler = null;
 try {
     EliteProHandler = require('./ElitePro');
+    console.log('[✓] Moteur ElitePro.js (330+ commandes) chargé avec succès !');
 } catch (e) {
-    console.error('[!] Erreur chargement ElitePro.js :', e.message);
+    console.error('[!] Erreur fatale dans ElitePro.js :', e);
 }
 
 const app = express();
@@ -34,7 +36,6 @@ const activeSessions = new Map();
 const sessionStatuses = new Map();
 const customCommands = new Map();
 
-// Charger les plugins custom
 function loadCustomPlugins() {
     customCommands.clear();
     const dir = path.join(__dirname, 'plugins', 'custom');
@@ -68,7 +69,6 @@ function getSessionDir(phone) {
     return dir;
 }
 
-// Supprimer proprement une session du disque et de la mémoire
 function removeSessionData(phone) {
     if (activeSessions.has(phone)) {
         try { 
@@ -86,7 +86,6 @@ function removeSessionData(phone) {
 }
 
 async function initSession(phone) {
-    // Si une session active et connectée existe déjà, on la réutilise
     if (activeSessions.has(phone)) {
         const existing = activeSessions.get(phone);
         if (existing?.ws?.readyState === 1) return existing;
@@ -98,7 +97,6 @@ async function initSession(phone) {
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
     const msgRetryCounterCache = new NodeCache();
 
-    // Purge des résidus d'appairage non validés pour éviter les désynchronisations
     if (!state.creds.registered && state.creds.pairingCode) {
         delete state.creds.pairingCode;
         delete state.creds.me;
@@ -116,7 +114,7 @@ async function initSession(phone) {
         msgRetryCounterCache,
         syncFullHistory: false,
         shouldSyncHistoryMessage: () => false,
-        markOnlineOnConnect: false,
+        markOnlineOnConnect: true,
         fireInitQueries: false,
         generateHighQualityLinkPreview: true,
         defaultQueryTimeoutMs: undefined,
@@ -125,12 +123,19 @@ async function initSession(phone) {
 
     sock = hookWASocket(sock);
 
-    // Enregistrement asynchrone des clés
+    sock.decodeJid = (jid) => {
+        if (!jid) return jid;
+        if (/:\d+@/gi.test(jid)) {
+            const decode = decodeURIComponent(jid);
+            return decode;
+        }
+        return jid;
+    };
+
     sock.ev.on('creds.update', async () => {
         await saveCreds();
     });
 
-    // Gestion de cycle de vie et reconnexion automatique
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
 
@@ -141,18 +146,28 @@ async function initSession(phone) {
                 registered: true
             });
             console.log(`[SESSION] +${phone} connecté avec succès à WhatsApp !`);
+
+            // ENVOI IMMÉDIAT DU MESSAGE DE BIENVENUE
+            setTimeout(async () => {
+                try {
+                    const rawId = sock.user?.id || '';
+                    const userJid = rawId ? rawId.split(':')[0] + '@s.whatsapp.net' : `${phone}@s.whatsapp.net`;
+                    await sock.sendMessage(userJid, {
+                        text: `🩸 *REVOLUTION MD EST OPÉRATIONNEL !* 🧟\n\n👑 *Créateur :* Mr Christ X (+50937081286)\n⚡ *Statut :* Session active & connectée\n\n👉 *Tapez :* .menu pour afficher la liste des commandes.\n\n_Zombie & Biohazard Multi-Device Edition_`
+                    });
+                    console.log(`[BIENVENUE] Message envoyé avec succès à +${phone}`);
+                } catch (err) {
+                    console.error('[BIENVENUE ERROR]', err.message);
+                }
+            }, 3000);
+
         } else if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            console.log(`[SESSION] +${phone} déconnecté (Code status : ${statusCode || 'inconnu'})`);
-            
-            // Retrait obligatoire de l'ancien socket mort pour permettre la recréation
             activeSessions.delete(phone);
 
             if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                 removeSessionData(phone);
-                console.log(`[SESSION] +${phone} déconnecté définitivement par WhatsApp.`);
             } else {
-                // Reconnexion automatique (notamment après la saisie du code où WhatsApp redémarre le flux)
                 sessionStatuses.set(phone, { status: 'reconnecting', registered: true });
                 setTimeout(() => {
                     initSession(phone).catch(e => console.error('[RECONNECT ERROR]', e.message));
@@ -161,23 +176,33 @@ async function initSession(phone) {
         }
     });
 
-    // Dispatch des commandes
+    // TRAITEMENT ET RÉPONSE AUX COMMANDES (.menu, etc.)
     sock.ev.on('messages.upsert', async (chatUpdate) => {
         try {
             const { messages, type } = chatUpdate;
             if (type !== 'notify' || !messages || !messages[0]) return;
-            const m = messages[0];
-            if (!m.message) return;
+            const rawM = messages[0];
+            if (!rawM.message) return;
 
-            const body = m.message?.conversation 
+            // Sérialisation du message via smsg pour compatibilité ElitePro
+            let m = rawM;
+            try {
+                m = smsg(sock, rawM, null);
+            } catch (err) {
+                m = rawM;
+            }
+
+            const body = m.body 
+                || m.message?.conversation 
                 || m.message?.extendedTextMessage?.text 
                 || m.message?.imageMessage?.caption 
                 || '';
-            
+
             let config = { prefix: '.' };
             try { config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')); } catch (e) {}
             const prefix = config.prefix || '.';
 
+            // 1. Exécution des commandes Custom du panel admin
             if (body && body.startsWith(prefix)) {
                 const args = body.slice(prefix.length).trim().split(/\s+/);
                 const cmdName = args.shift().toLowerCase();
@@ -192,11 +217,12 @@ async function initSession(phone) {
                 }
             }
 
+            // 2. Exécution du moteur natif ElitePro.js (330+ commandes)
             if (EliteProHandler) {
                 await EliteProHandler(sock, m, chatUpdate, null);
             }
         } catch (err) {
-            console.error('Erreur dispatch message :', err);
+            console.error('[COMMAND DISPATCH ERROR] :', err.message);
         }
     });
 
@@ -213,15 +239,13 @@ app.get('/christechadmin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
-// Endpoint Pairing Code Web avec stabilisation WebSocket
 app.post('/api/pairing', async (req, res) => {
     try {
         const phone = (req.body.phone || '').replace(/[^0-9]/g, '');
         if (!phone || phone.length < 8) {
-            return res.status(400).json({ error: 'Numéro invalide (ex: 50937081286)' });
+            return res.status(400).json({ error: 'Numéro invalide' });
         }
 
-        // Si la session existait sans être validée, on purge pour repartir sur un handshake propre
         const currentStat = sessionStatuses.get(phone);
         if (currentStat && currentStat.status !== 'connected') {
             removeSessionData(phone);
@@ -230,29 +254,23 @@ app.post('/api/pairing', async (req, res) => {
         const sock = await initSession(phone);
 
         if (!sock.authState.creds.registered) {
-            // Délai de 3 secondes pour s'assurer que la socket WebSocket est complètement ouverte
             await new Promise(r => setTimeout(r, 3000));
-
             try {
                 const code = await sock.requestPairingCode(phone);
                 const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
-                console.log(`[PAIRING WEB] Nouveau code généré pour +${phone} : ${formatted}`);
                 return res.json({ code: formatted });
             } catch (err) {
-                console.error('[PAIRING ERROR]', err);
                 removeSessionData(phone);
-                return res.status(500).json({ error: 'Échec Baileys. Réessayez dans quelques secondes.' });
+                return res.status(500).json({ error: 'Échec Baileys. Réessayez.' });
             }
         } else {
             return res.json({ error: 'Ce numéro est déjà lié et actif.' });
         }
     } catch (err) {
-        console.error(err);
         res.status(500).json({ error: 'Erreur interne' });
     }
 });
 
-// APIs Administration
 app.get('/api/admin/sessions', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const list = [];
@@ -269,12 +287,10 @@ app.delete('/api/admin/sessions/:phone', (req, res) => {
     res.json({ success: true, message: `Session ${phone} supprimée.` });
 });
 
-// Extraction dynamique de toutes les commandes natives + custom
 app.get('/api/admin/commands', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const list = [];
     
-    // Commandes custom
     for (const [name, cmd] of customCommands.entries()) {
         list.push({
             name: cmd.name,
@@ -286,7 +302,6 @@ app.get('/api/admin/commands', (req, res) => {
         });
     }
 
-    // Scan complet d'ElitePro.js pour afficher les commandes natives
     try {
         const eliteCode = fs.readFileSync(path.join(__dirname, 'ElitePro.js'), 'utf8');
         const regex = /case\s+['"]([a-zA-Z0-9_-]+)['"]\s*:/g;
@@ -314,7 +329,7 @@ app.get('/api/admin/commands', (req, res) => {
 app.get('/api/admin/commands/:name', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const cmd = customCommands.get(req.params.name.toLowerCase());
-    if (!cmd || !cmd.filePath) return res.status(404).json({ error: 'Commande introuvable ou commande native du core.' });
+    if (!cmd || !cmd.filePath) return res.status(404).json({ error: 'Commande introuvable' });
 
     const code = fs.readFileSync(cmd.filePath, 'utf8');
     res.json({
