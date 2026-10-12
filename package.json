@@ -1,12 +1,11 @@
 {
-  "name": "revolution-md-ultimate-fusion",
+  "name": "revolution-md",
   "version": "4.0.0",
-  "description": "Fusion Revolution MD (Mr Christ X) + ElitePro Engine (332 commandes) Multi-Session Web Bot",
   "main": "server.js",
-  "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
-  },
+    "start": "npm install && node server.js"
+  }
+}
   "dependencies": {
     "baileys": "npm:eliteprotech-baileys@1.1.2",
     "@hapi/boom": "latest",
