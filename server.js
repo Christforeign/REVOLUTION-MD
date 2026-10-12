@@ -12,7 +12,8 @@ const {
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore
+    makeCacheableSignalKeyStore,
+    Browsers
 } = require('baileys');
 
 let EliteProHandler;
@@ -100,7 +101,11 @@ async function initSession(phone) {
         msgRetryCounterCache,
         syncFullHistory: false,
         markOnlineOnConnect: true,
-        browser: ['Ubuntu', 'Chrome', '20.0.04']
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 10000,
+        generateHighQualityLinkPreview: true,
+        browser: Browsers.macOS('Desktop')
     });
 
     sock = hookWASocket(sock);
@@ -179,7 +184,7 @@ app.get('/christechadmin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
-// Endpoint Pairing Code Web avec auto-nettoyage en cas d'échec
+// Endpoint Pairing Code Web avec fiabilisation et synchronisation
 app.post('/api/pairing', async (req, res) => {
     try {
         const phone = (req.body.phone || '').replace(/[^0-9]/g, '');
@@ -187,7 +192,7 @@ app.post('/api/pairing', async (req, res) => {
             return res.status(400).json({ error: 'Numéro invalide (ex: 50937081286)' });
         }
 
-        // Si la session existait mais n'était PAS réellement enregistrée/connectée, on la réinitialise
+        // Si la session existait sans être validée, on purge les données précédentes
         const currentStat = sessionStatuses.get(phone);
         if (currentStat && currentStat.status !== 'connected') {
             removeSessionData(phone);
@@ -196,17 +201,19 @@ app.post('/api/pairing', async (req, res) => {
         const sock = await initSession(phone);
 
         if (!sock.authState.creds.registered) {
-            setTimeout(async () => {
-                try {
-                    const code = await sock.requestPairingCode(phone);
-                    const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
-                    console.log(`[PAIRING WEB] Code pour ${phone} : ${formatted}`);
-                    return res.json({ code: formatted });
-                } catch (err) {
-                    removeSessionData(phone);
-                    return res.status(500).json({ error: 'Échec Baileys. Réessayez dans 10 secondes.' });
-                }
-            }, 6000);
+            // Pause de 2.5 secondes pour stabiliser l'établissement du socket Baileys
+            await new Promise(r => setTimeout(r, 2500));
+
+            try {
+                const code = await sock.requestPairingCode(phone);
+                const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
+                console.log(`[PAIRING WEB] Code généré pour +${phone} : ${formatted}`);
+                return res.json({ code: formatted });
+            } catch (err) {
+                console.error('[PAIRING ERROR]', err);
+                removeSessionData(phone);
+                return res.status(500).json({ error: 'Échec Baileys. Réessayez dans 10 secondes.' });
+            }
         } else {
             return res.json({ error: 'Ce numéro est déjà lié et actif.' });
         }
@@ -226,7 +233,7 @@ app.get('/api/admin/sessions', (req, res) => {
     res.json({ sessions: list });
 });
 
-// SUPPRIMER UNE SESSION DIRECTEMENT DEPUIS L'ADMIN
+// Supprimer une session directement depuis l'admin
 app.delete('/api/admin/sessions/:phone', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const phone = req.params.phone.replace(/[^0-9]/g, '');
@@ -234,12 +241,12 @@ app.delete('/api/admin/sessions/:phone', (req, res) => {
     res.json({ success: true, message: `Session ${phone} supprimée.` });
 });
 
-// EXTRACTION DYNAMIQUE DE TOUTES LES COMMANDES NATIVES + CUSTOM
+// Extraction dynamique de toutes les commandes natives + custom
 app.get('/api/admin/commands', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const list = [];
     
-    // 1. Commandes custom (modifiables)
+    // 1. Commandes custom
     for (const [name, cmd] of customCommands.entries()) {
         list.push({
             name: cmd.name,
