@@ -8,12 +8,11 @@ const fs = require('fs');
 const pino = require('pino');
 const NodeCache = require('node-cache');
 const {
-    default: makeWaSocket,
+    default: makeWASocket,
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore,
-    Browsers
+    makeCacheableSignalKeyStore
 } = require('baileys');
 
 let EliteProHandler;
@@ -72,7 +71,11 @@ function getSessionDir(phone) {
 // Supprimer proprement une session du disque et de la mémoire
 function removeSessionData(phone) {
     if (activeSessions.has(phone)) {
-        try { activeSessions.get(phone).end(); } catch (e) {}
+        try { 
+            const s = activeSessions.get(phone);
+            s.ws?.close();
+            s.end(); 
+        } catch (e) {}
         activeSessions.delete(phone);
     }
     sessionStatuses.delete(phone);
@@ -83,37 +86,54 @@ function removeSessionData(phone) {
 }
 
 async function initSession(phone) {
-    if (activeSessions.has(phone)) return activeSessions.get(phone);
+    // Si une session active et connectée existe déjà, on la réutilise
+    if (activeSessions.has(phone)) {
+        const existing = activeSessions.get(phone);
+        if (existing?.ws?.readyState === 1) return existing;
+        activeSessions.delete(phone);
+    }
 
     const sessionDir = getSessionDir(phone);
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
     const msgRetryCounterCache = new NodeCache();
 
-    let sock = makeWaSocket({
+    // Purge des résidus d'appairage non validés pour éviter les désynchronisations
+    if (!state.creds.registered && state.creds.pairingCode) {
+        delete state.creds.pairingCode;
+        delete state.creds.me;
+        await saveCreds();
+    }
+
+    let sock = makeWASocket({
         version,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
         auth: {
             creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
         },
         msgRetryCounterCache,
         syncFullHistory: false,
-        markOnlineOnConnect: true,
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 10000,
+        shouldSyncHistoryMessage: () => false,
+        markOnlineOnConnect: false,
+        fireInitQueries: false,
         generateHighQualityLinkPreview: true,
-        browser: Browsers.macOS('Desktop')
+        defaultQueryTimeoutMs: undefined,
+        browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
     sock = hookWASocket(sock);
 
-    sock.ev.on('creds.update', saveCreds);
+    // Enregistrement asynchrone des clés
+    sock.ev.on('creds.update', async () => {
+        await saveCreds();
+    });
 
-    sock.ev.on('connection.update', (update) => {
+    // Gestion de cycle de vie et reconnexion automatique
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
+
         if (connection === 'open') {
             sessionStatuses.set(phone, {
                 status: 'connected',
@@ -123,16 +143,25 @@ async function initSession(phone) {
             console.log(`[SESSION] +${phone} connecté avec succès à WhatsApp !`);
         } else if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            if (statusCode === DisconnectReason.loggedOut) {
+            console.log(`[SESSION] +${phone} déconnecté (Code status : ${statusCode || 'inconnu'})`);
+            
+            // Retrait obligatoire de l'ancien socket mort pour permettre la recréation
+            activeSessions.delete(phone);
+
+            if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                 removeSessionData(phone);
-                console.log(`[SESSION] +${phone} déconnecté définitivement.`);
+                console.log(`[SESSION] +${phone} déconnecté définitivement par WhatsApp.`);
             } else {
+                // Reconnexion automatique (notamment après la saisie du code où WhatsApp redémarre le flux)
                 sessionStatuses.set(phone, { status: 'reconnecting', registered: true });
-                initSession(phone);
+                setTimeout(() => {
+                    initSession(phone).catch(e => console.error('[RECONNECT ERROR]', e.message));
+                }, 1500);
             }
         }
     });
 
+    // Dispatch des commandes
     sock.ev.on('messages.upsert', async (chatUpdate) => {
         try {
             const { messages, type } = chatUpdate;
@@ -184,7 +213,7 @@ app.get('/christechadmin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
-// Endpoint Pairing Code Web avec fiabilisation et synchronisation
+// Endpoint Pairing Code Web avec stabilisation WebSocket
 app.post('/api/pairing', async (req, res) => {
     try {
         const phone = (req.body.phone || '').replace(/[^0-9]/g, '');
@@ -192,7 +221,7 @@ app.post('/api/pairing', async (req, res) => {
             return res.status(400).json({ error: 'Numéro invalide (ex: 50937081286)' });
         }
 
-        // Si la session existait sans être validée, on purge les données précédentes
+        // Si la session existait sans être validée, on purge pour repartir sur un handshake propre
         const currentStat = sessionStatuses.get(phone);
         if (currentStat && currentStat.status !== 'connected') {
             removeSessionData(phone);
@@ -201,18 +230,18 @@ app.post('/api/pairing', async (req, res) => {
         const sock = await initSession(phone);
 
         if (!sock.authState.creds.registered) {
-            // Pause de 2.5 secondes pour stabiliser l'établissement du socket Baileys
-            await new Promise(r => setTimeout(r, 2500));
+            // Délai de 3 secondes pour s'assurer que la socket WebSocket est complètement ouverte
+            await new Promise(r => setTimeout(r, 3000));
 
             try {
                 const code = await sock.requestPairingCode(phone);
                 const formatted = code?.match(/.{1,4}/g)?.join('-') || code;
-                console.log(`[PAIRING WEB] Code généré pour +${phone} : ${formatted}`);
+                console.log(`[PAIRING WEB] Nouveau code généré pour +${phone} : ${formatted}`);
                 return res.json({ code: formatted });
             } catch (err) {
                 console.error('[PAIRING ERROR]', err);
                 removeSessionData(phone);
-                return res.status(500).json({ error: 'Échec Baileys. Réessayez dans 10 secondes.' });
+                return res.status(500).json({ error: 'Échec Baileys. Réessayez dans quelques secondes.' });
             }
         } else {
             return res.json({ error: 'Ce numéro est déjà lié et actif.' });
@@ -233,7 +262,6 @@ app.get('/api/admin/sessions', (req, res) => {
     res.json({ sessions: list });
 });
 
-// Supprimer une session directement depuis l'admin
 app.delete('/api/admin/sessions/:phone', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const phone = req.params.phone.replace(/[^0-9]/g, '');
@@ -246,7 +274,7 @@ app.get('/api/admin/commands', (req, res) => {
     if (req.headers['x-admin-pass'] !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Accès refusé' });
     const list = [];
     
-    // 1. Commandes custom
+    // Commandes custom
     for (const [name, cmd] of customCommands.entries()) {
         list.push({
             name: cmd.name,
@@ -258,7 +286,7 @@ app.get('/api/admin/commands', (req, res) => {
         });
     }
 
-    // 2. Scan complet du fichier ElitePro.js pour lister les 330+ commandes réelles
+    // Scan complet d'ElitePro.js pour afficher les commandes natives
     try {
         const eliteCode = fs.readFileSync(path.join(__dirname, 'ElitePro.js'), 'utf8');
         const regex = /case\s+['"]([a-zA-Z0-9_-]+)['"]\s*:/g;
