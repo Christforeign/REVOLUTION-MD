@@ -1,6 +1,6 @@
 require('./config');
 const { hookWASocket } = require('./brand');
-require('dotenv').config();
+try { require('dotenv').config(); } catch (e) {}
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
