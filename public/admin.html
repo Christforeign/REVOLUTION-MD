@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>☣️ REVOLUTION MD - COMMAND CENTER HORROR EDITION ☣️</title>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blood: #8a0303;
+            --bright-blood: #ff073a;
+            --toxic: #39ff14;
+            --toxic-glow: rgba(57, 255, 20, 0.4);
+            --dark-abyss: #070709;
+            --rust-panel: #110909;
+            --border-glow: rgba(255, 7, 58, 0.5);
+            --blood-glow: rgba(255, 7, 58, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--dark-abyss);
+            background-image: 
+                radial-gradient(circle at 50% 5%, rgba(138, 3, 3, 0.4) 0%, transparent 65%),
+                radial-gradient(circle at 85% 85%, rgba(57, 255, 20, 0.08) 0%, transparent 55%),
+                linear-gradient(rgba(10, 5, 5, 0.96), rgba(5, 5, 5, 0.98));
+            color: #dcd1d1;
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Gouttes de sang en haut de l'écran */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 16px;
+            background: radial-gradient(circle at 12px 0, var(--bright-blood) 70%, transparent 75%) repeat-x;
+            background-size: 24px 24px;
+            filter: drop-shadow(0 2px 10px var(--bright-blood));
+            z-index: 9999;
+        }
+
+        .main-wrapper {
+            max-width: 1400px;
+            margin: auto;
+            background: var(--rust-panel);
+            border: 2px solid var(--blood);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 0 40px rgba(138, 3, 3, 0.65), inset 0 0 30px rgba(0, 0, 0, 0.95);
+        }
+
+        /* En-tête */
+        header.horror-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px dashed rgba(255, 7, 58, 0.35);
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-left h1 {
+            font-family: 'Nosifer', cursive;
+            color: var(--bright-blood);
+            font-size: 28px;
+            letter-spacing: 2.5px;
+            text-shadow: 0 0 12px var(--bright-blood), 0 0 25px black;
+        }
+
+        .header-left p {
+            font-size: 13px;
+            color: #887;
+            margin-top: 5px;
+            letter-spacing: 1px;
+        }
+
+        .owner-badge {
+            background: rgba(138, 3, 3, 0.35);
+            border: 1.5px solid var(--bright-blood);
+            color: var(--bright-blood);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            letter-spacing: 1.5px;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 7, 58, 0.3);
+        }
+
+        /* Navigation Onglets */
+        .horror-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            border-bottom: 1.5px solid rgba(255, 7, 58, 0.25);
+            padding-bottom: 14px;
+        }
+
+        .tab-btn {
+            background: rgba(22, 10, 10, 0.9);
+            border: 1.5px solid #3d1414;
+            color: #b5a4a4;
+            padding: 12px 22px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            font-size: 14px;
+            letter-spacing: 1px;
+            transition: all 0.25s;
+        }
+
+        .tab-btn:hover {
+            border-color: var(--bright-blood);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(255, 7, 58, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(180deg, #990000 0%, #4d0000 100%);
+            border-color: var(--bright-blood);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(255, 7, 58, 0.7);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Grille & Sections */
+        .two-cols {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 1024px) {
+            .two-cols { grid-template-columns: 1fr; }
+        }
+
+        .horror-card {
+            background: rgba(9, 4, 4, 0.85);
+            border: 1.5px solid #3d1414;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        .horror-card.highlight {
+            border-color: var(--bright-blood);
+            box-shadow: 0 0 25px rgba(138, 3, 3, 0.5), inset 0 0 20px rgba(0,0,0,0.9);
+        }
+
+        .card-title {
+            color: var(--bright-blood);
+            font-size: 17px;
+            letter-spacing: 1.5px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 7, 58, 0.2);
+            padding-bottom: 10px;
+        }
+
+        /* Formulaire & Champs */
+        label {
+            display: block;
+            margin-top: 14px;
+            font-size: 12px;
+            color: var(--bright-blood);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: bold;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 14px;
+            margin-top: 6px;
+            background: rgba(7, 7, 9, 0.95);
+            border: 1.5px solid #3d1414;
+            border-radius: 6px;
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--bright-blood);
+            box-shadow: 0 0 14px rgba(255, 7, 58, 0.45);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* Boutons d'Horreur */
+        .btn-horror {
+            display: inline-block;
+            margin-top: 18px;
+            padding: 14px 28px;
+            background: linear-gradient(180deg, #990000 0%, #4d0000 100%);
+            border: 1.5px solid var(--bright-blood);
+            border-radius: 6px;
+            color: #fff;
+            font-family: 'Creepster', cursive;
+            font-size: 20px;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            transition: 0.25s;
+            text-shadow: 0 2px 4px black;
+        }
+
+        .btn-horror:hover {
+            background: linear-gradient(180deg, #b30000 0%, #660000 100%);
+            box-shadow: 0 0 25px var(--bright-blood);
+            transform: scale(1.02);
+        }
+
+        .btn-secondary {
+            background: #1f1212;
+            border: 1px solid #4a1f1f;
+            color: #ccc;
+            padding: 10px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--bright-blood);
+            color: #fff;
+        }
+
+        .btn-del-danger {
+            background: #8a0303;
+            border: 1px solid var(--bright-blood);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /* Table des Commandes */
+        .table-scroll {
+            max-height: 520px;
+            overflow-y: auto;
+            border: 1px solid #3d1414;
+            border-radius: 6px;
+        }
+
+        .horror-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(10, 5, 5, 0.7);
+        }
+
+        .horror-table th, .horror-table td {
+            border: 1px solid #2b1111;
+            padding: 11px 13px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .horror-table th {
+            background: #1c0a0a;
+            color: var(--bright-blood);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .badge-toxic {
+            background: rgba(57, 255, 20, 0.15);
+            border: 1px solid var(--toxic);
+            color: var(--toxic);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-blood {
+            background: rgba(255, 7, 58, 0.15);
+            border: 1px solid var(--bright-blood);
+            color: var(--bright-blood);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-core {
+            background: #201010;
+            color: #8b7777;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        /* Login Screen */
+        #authSection {
+            text-align: center;
+            padding: 70px 20px;
+        }
+
+        #authSection input {
+            max-width: 360px;
+            display: inline-block;
+            margin: 18px 0;
+            text-align: center;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        <!-- HEADER -->
+        <header class="horror-header">
+            <div class="header-left">
+                <h1>REVOLUTION MD</h1>
+                <p>🧟 BIOHAZARD & COMMAND ARCHITECTURE • CHRISTECHADMIN</p>
+            </div>
+            <div class="owner-badge">👑 OWNER : MR CHRIST X (+50937081286)</div>
+        </header>
+
+        <!-- AUTHENTIFICATION -->
+        <div id="authSection">
+            <h2 style="font-family: 'Nosifer', cursive; color: var(--bright-blood); font-size: 22px; margin-bottom: 12px;">DÉVERROUILLAGE ADMINISTRATEUR</h2>
+            <p style="color: #8b7777; font-size: 14px;">Entrez la clé maîtresse pour accéder au centre de contrôle de Revolution MD.</p>
+            <input type="password" id="adminPass" placeholder="Mot de passe admin (@#xbot#@)"><br>
+            <button class="btn-horror" onclick="login()">PÉNÉTRER DANS LE SYSTÈME 💀</button>
+        </div>
+
+        <!-- DASHBOARD COMPLET -->
+        <div id="mainDashboard" style="display: none;">
+            <!-- ONGLETS -->
+            <div class="horror-tabs">
+                <button class="tab-btn active" onclick="switchTab('commands')">📦 GESTION DES COMMANDES & CODE</button>
+                <button class="tab-btn" onclick="switchTab('sessions')">📱 SESSIONS WHATSAPP CONNECTÉES</button>
+                <button class="tab-btn" onclick="switchTab('media')">🖼️ MÉDIAS DU MENU (.menu)</button>
+                <button class="tab-btn" onclick="switchTab('status')">📢 DIFFUSION STATUT WHATSAPP</button>
+                <button class="tab-btn" onclick="switchTab('api')">🔑 CLÉS D'APIS & PARAMÈTRES</button>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ONGLET 1 : COMMANDES & ÉDITEUR JS COMPLET -->
+            <!-- ========================================== -->
+            <div id="tab-commands" class="tab-content active">
+                <div class="two-cols">
+                    <!-- COLONNE GAUCHE : LISTE DES COMMANDES -->
+                    <div class="horror-card">
+                        <div class="card-title">
+                            <span>📜 COMMANDES ACTIVES</span>
+                            <button class="btn-secondary" onclick="loadCommandsList()">🔄 Actualiser</button>
+                        </div>
+                        <p style="font-size: 12px; color: #887; margin-bottom: 12px;">Cliquez sur ✏️ pour charger n'importe quel code de commande dans l'éditeur :</p>
+                        
+                        <div class="table-scroll">
+                            <table class="horror-table">
+                                <thead>
+                                    <tr>
+                                        <th>Commande</th>
+                                        <th>Catégorie</th>
+                                        <th>Source</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="commandTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- COLONNE DROITE : ÉDITEUR DE CODE -->
+                    <div class="horror-card highlight">
+                        <div class="card-title">
+                            <span id="editorTitle">➕ CRÉER OU MODIFIER UNE COMMANDE</span>
+                            <button class="btn-secondary" onclick="resetEditor()">🔄 Nouveau Template</button>
+                        </div>
+                        <p style="font-size: 12px; color: #887; margin-bottom: 15px;">Configurez le déclencheur, la catégorie, l'API requise et injectez votre code JavaScript :</p>
+
+                        <div class="grid-2">
+                            <div>
+                                <label>Nom de la commande (ex: translate)</label>
+                                <input type="text" id="cmdName" placeholder="nom_commande">
+                            </div>
+                            <div>
+                                <label>Nom du fichier (ex: translate.js)</label>
+                                <input type="text" id="cmdFileName" placeholder="nom_fichier.js">
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div>
+                                <label>Catégorie (general, ai, download, tools, fun, owner)</label>
+                                <input type="text" id="cmdCategory" placeholder="general">
+                            </div>
+                            <div>
+                                <label>Clé API requise (Optionnel : gemini, openai, removebg)</label>
+                                <input type="text" id="cmdRequiredApi" placeholder="Nom clé API ou vide">
+                            </div>
+                        </div>
+
+                        <label>Description (affichée dans le menu WhatsApp)</label>
+                        <input type="text" id="cmdDescription" placeholder="Description de la commande">
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                            <label style="margin: 0;">Code source JavaScript Baileys :</label>
+                            <select id="templateSelector" onchange="applyTemplate()" style="width: auto; padding: 4px 10px; font-size: 12px; margin: 0;">
+                                <option value="">Templates prêts à l'emploi...</option>
+                                <option value="simple">Message Simple</option>
+                                <option value="ai">Intelligence Artificielle (API)</option>
+                                <option value="media">Envoi Image / Sticker</option>
+                                <option value="group">Action Modération Groupe</option>
+                            </select>
+                        </div>
+                        <textarea id="cmdCode" rows="16" style="margin-top: 8px; font-size: 13px; line-height: 1.4; color: #39ff14;"></textarea>
+
+                        <div style="display: flex; gap: 15px; align-items: center; margin-top: 15px;">
+                            <button class="btn-horror" onclick="saveCommand()">💾 ENREGISTRER & INJECTER À CHAUD</button>
+                            <span id="cmdSaveStatus" style="color: var(--toxic); font-weight: bold; font-size: 13px;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ONGLET 2 : SESSIONS WHATSAPP -->
+            <!-- ========================================== -->
+            <div id="tab-sessions" class="tab-content">
+                <div class="horror-card">
+                    <div class="card-title">
+                        <span>📱 SESSIONS WHATSAPP SYNCHRONISÉES</span>
+                        <button class="btn-secondary" onclick="loadSessions()">🔄 Rafraîchir</button>
+                    </div>
+                    <p style="font-size: 13px; color: #887; margin-bottom: 20px;">Toutes les sessions connectées via le moteur multi-sessions Baileys :</p>
+                    <table class="horror-table">
+                        <thead>
+                            <tr>
+                                <th>Numéro WhatsApp</th>
+                                <th>État de Connexion</th>
+                                <th>Date d'Enregistrement</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessionTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ONGLET 3 : MÉDIAS DU MENU -->
+            <!-- ========================================== -->
+            <div id="tab-media" class="tab-content">
+                <div class="horror-card highlight">
+                    <div class="card-title">
+                        <span>🖼️ MÉDIAS & BANNIÈRES DU MENU (.menu)</span>
+                    </div>
+                    <label>Mode d'affichage</label>
+                    <select id="menuDisplayMode">
+                        <option value="random">Aléatoire (Rotation aléatoire parmi les URLs)</option>
+                        <option value="fixed">Fixe (Affiche toujours le premier média)</option>
+                    </select>
+
+                    <label>URLs des Images & Vidéos (Séparées par des virgules)</label>
+                    <textarea id="menuMediaUrls" rows="6" placeholder="https://image1.jpg, https://image2.jpg..."></textarea>
+
+                    <button class="btn-horror" onclick="saveMediaConfig()">SAUVEGARDER LES MÉDIAS DU MENU</button>
+                    <span id="mediaSaveStatus" style="color: var(--toxic); margin-left: 15px; font-weight: bold;"></span>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ONGLET 4 : BROADCAST STATUT -->
+            <!-- ========================================== -->
+            <div id="tab-status" class="tab-content">
+                <div class="horror-card">
+                    <div class="card-title">
+                        <span>📢 POSTER UN STATUT WHATSAPP EN MASSE</span>
+                    </div>
+                    <p style="font-size: 13px; color: #887; margin-bottom: 15px;">Le message tapé ici sera publié instantanément comme statut (Story) sur tous les comptes WhatsApp actuellement connectés à Revolution MD :</p>
+
+                    <label>Texte du Statut</label>
+                    <textarea id="broadcastStatusText" rows="4" placeholder="Écrivez le message de statut à diffuser..."></textarea>
+                    
+                    <button class="btn-horror" onclick="postStatusBroadcast()">PUBLIER LE STATUT SUR TOUTES LES SESSIONS 🚀</button>
+                    <span id="broadcastResult" style="color: var(--toxic); margin-left: 15px; font-weight: bold;"></span>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ONGLET 5 : CLÉS D'APIS & PARAMÈTRES -->
+            <!-- ========================================== -->
+            <div id="tab-api" class="tab-content">
+                <div class="horror-card highlight">
+                    <div class="card-title">
+                        <span>🔑 CONFIGURATION GLOBALE & CLÉS D'APIS</span>
+                    </div>
+                    <div class="grid-2">
+                        <div>
+                            <label>Nom du Bot</label>
+                            <input type="text" id="cfgBotName">
+                        </div>
+                        <div>
+                            <label>Préfixe Principal</label>
+                            <input type="text" id="cfgPrefix">
+                        </div>
+                    </div>
+                    <label>Numéro Créateur / Owner</label>
+                    <input type="text" id="cfgOwnerNumber">
+
+                    <h4 style="color: var(--toxic); margin-top: 25px; margin-bottom: 10px;">CLÉS D'APIS TIERCES POUR LES COMMANDES :</h4>
+                    <label>Clé API Gemini (Google AI)</label>
+                    <input type="text" id="apiKeyGemini" placeholder="AIzaSy...">
+
+                    <label>Clé API OpenAI (ChatGPT)</label>
+                    <input type="text" id="apiKeyOpenai" placeholder="sk-...">
+
+                    <label>Clé API RemoveBG</label>
+                    <input type="text" id="apiKeyRemovebg" placeholder="Clé Remove.bg">
+
+                    <button class="btn-horror" onclick="saveApiConfig()">METTRE À JOUR LA CONFIGURATION</button>
+                    <span id="apiSaveStatus" style="color: var(--toxic); margin-left: 15px; font-weight: bold;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let adminToken = '';
+
+        const templates = {
+            simple: `module.exports = {
+    name: 'customcmd',
+    category: 'custom',
+    description: 'Description de ma commande custom',
+    requiredApi: '',
+    async execute(sock, m, args, { config, apis }) {
+        const jid = m.key.remoteJid;
+        const texte = args.join(' ') || 'Bonjour depuis Revolution MD !';
+        await sock.sendMessage(jid, { 
+            text: '🩸 *Revolution MD (Mr Christ X)* : ' + texte 
+        }, { quoted: m });
+    }
+};`,
+            ai: `const axios = require('axios');
+
+module.exports = {
+    name: 'askai',
+    category: 'ai',
+    description: 'Interrogation IA avec clé API',
+    requiredApi: 'gemini', // Utilise la clé configurée dans le panel
+    async execute(sock, m, args, { config, apis }) {
+        const jid = m.key.remoteJid;
+        const prompt = args.join(' ');
+        if (!prompt) return sock.sendMessage(jid, { text: 'Pose ta question !' }, { quoted: m });
+
+        const apiKey = apis.gemini;
+        if (!apiKey) return sock.sendMessage(jid, { text: 'Clé API Gemini manquante dans le panel admin !' }, { quoted: m });
+
+        try {
+            await sock.sendMessage(jid, { react: { text: '🧠', key: m.key } });
+            const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey;
+            const res = await axios.post(url, { contents: [{ parts: [{ text: prompt }] }] });
+            const answer = res.data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Pas de réponse.';
+            await sock.sendMessage(jid, { text: answer }, { quoted: m });
+        } catch (e) {
+            await sock.sendMessage(jid, { text: 'Erreur lors de la requête IA.' }, { quoted: m });
+        }
+    }
+};`,
+            media: `module.exports = {
+    name: 'sendpic',
+    category: 'tools',
+    description: 'Envoie une image avec légende',
+    requiredApi: '',
+    async execute(sock, m, args, { config }) {
+        const jid = m.key.remoteJid;
+        await sock.sendMessage(jid, {
+            image: { url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800' },
+            caption: '🩸 *Infection Revolution MD Active*'
+        }, { quoted: m });
+    }
+};`,
+            group: `module.exports = {
+    name: 'warnmember',
+    category: 'group',
+    description: 'Avertit un participant du groupe',
+    requiredApi: '',
+    async execute(sock, m, args, { config }) {
+        const jid = m.key.remoteJid;
+        const target = m.message?.extendedTextMessage?.contextInfo?.participant;
+        if (!target) return sock.sendMessage(jid, { text: 'Tag un membre ou réponds à son message !' }, { quoted: m });
+
+        await sock.sendMessage(jid, {
+            text: '⚠️ Attention @' + target.split('@')[0] + ', respecte les règles du groupe !',
+            mentions: [target]
+        }, { quoted: m });
+    }
+};`
+        };
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        async function login() {
+            adminToken = document.getElementById('adminPass').value;
+            const res = await fetch('/api/admin/config', { headers: { 'x-admin-pass': adminToken } });
+            if (res.status === 403) return alert('Mot de passe admin incorrect !');
+            
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('mainDashboard').style.display = 'block';
+
+            resetEditor();
+            await loadAll();
+        }
+
+        async function loadAll() {
+            await loadCommandsList();
+            await loadSessions();
+            await loadConfig();
+        }
+
+        function resetEditor() {
+            document.getElementById('editorTitle').innerText = '➕ CRÉER UNE NOUVELLE COMMANDE';
+            document.getElementById('cmdName').value = '';
+            document.getElementById('cmdFileName').value = '';
+            document.getElementById('cmdCategory').value = 'general';
+            document.getElementById('cmdRequiredApi').value = '';
+            document.getElementById('cmdDescription').value = '';
+            document.getElementById('cmdCode').value = templates.simple;
+            document.getElementById('cmdSaveStatus').innerText = '';
+        }
+
+        function applyTemplate() {
+            const val = document.getElementById('templateSelector').value;
+            if (templates[val]) {
+                document.getElementById('cmdCode').value = templates[val];
+            }
+        }
+
+        async function loadCommandsList() {
+            const res = await fetch('/api/admin/commands', { headers: { 'x-admin-pass': adminToken } });
+            const data = await res.json();
+            const tbody = document.getElementById('commandTableBody');
+            tbody.innerHTML = '';
+            
+            data.commands.forEach(c => {
+                const typeBadge = c.isCustom ? '<span class="badge-blood">Custom</span>' : '<span class="badge-core">Native</span>';
+                let actions = '<span style="color:#665;">Verrouillé</span>';
+                if (c.isCustom) {
+                    actions = `
+                        <button class="btn-secondary" style="padding: 4px 8px;" onclick="editCommand('${c.name}')">✏️</button>
+                        <button class="btn-del-danger" onclick="deleteCommand('${c.name}')">🗑️</button>
+                    `;
+                }
+
+                tbody.innerHTML += `<tr>
+                    <td><strong>.${c.name}</strong></td>
+                    <td>${c.category}</td>
+                    <td>${typeBadge}</td>
+                    <td>${actions}</td>
+                </tr>`;
+            });
+        }
+
+        async function editCommand(name) {
+            const res = await fetch('/api/admin/commands/' + encodeURIComponent(name), {
+                headers: { 'x-admin-pass': adminToken }
+            });
+            const data = await res.json();
+            if (data.error) return alert(data.error);
+
+            document.getElementById('editorTitle').innerText = '✏️ MODIFIER : .' + data.name;
+            document.getElementById('cmdName').value = data.name || '';
+            document.getElementById('cmdFileName').value = data.fileName || (data.name + '.js');
+            document.getElementById('cmdCategory').value = data.category || 'general';
+            document.getElementById('cmdRequiredApi').value = data.requiredApi || '';
+            document.getElementById('cmdDescription').value = data.description || '';
+            document.getElementById('cmdCode').value = data.code || '';
+            document.getElementById('cmdSaveStatus').innerText = '';
+
+            window.scrollTo({ top: document.querySelector('.horror-card.highlight').offsetTop - 30, behavior: 'smooth' });
+        }
+
+        async function saveCommand() {
+            const name = document.getElementById('cmdName').value.trim();
+            const filename = document.getElementById('cmdFileName').value.trim() || (name + '.js');
+            const code = document.getElementById('cmdCode').value;
+
+            if (!name || !code) return alert('Nom et code de la commande obligatoires !');
+
+            const res = await fetch('/api/admin/commands', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-pass': adminToken },
+                body: JSON.stringify({ filename, code })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('cmdSaveStatus').innerText = '✅ INJECTÉE DANS WHATSAPP !';
+                await loadCommandsList();
+            } else {
+                alert('Erreur : ' + data.error);
+            }
+        }
+
+        async function deleteCommand(name) {
+            if (!confirm('Supprimer définitivement la commande .' + name + ' ?')) return;
+            const res = await fetch('/api/admin/commands/' + encodeURIComponent(name), {
+                method: 'DELETE',
+                headers: { 'x-admin-pass': adminToken }
+            });
+            const data = await res.json();
+            if (data.success) {
+                await loadCommandsList();
+                resetEditor();
+            } else {
+                alert(data.error);
+            }
+        }
+
+        async function loadSessions() {
+            const res = await fetch('/api/admin/sessions', { headers: { 'x-admin-pass': adminToken } });
+            const data = await res.json();
+            const tbody = document.getElementById('sessionTableBody');
+            tbody.innerHTML = '';
+            if (data.sessions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="color:#887;">Aucune session WhatsApp active pour le moment.</td></tr>';
+                return;
+            }
+            data.sessions.forEach(s => {
+                tbody.innerHTML += `<tr>
+                    <td><strong>+${s.phone}</strong></td>
+                    <td><span class="badge-toxic">${s.status}</span></td>
+                    <td>${s.connectedAt || 'En attente'}</td>
+                </tr>`;
+            });
+        }
+
+        async function loadConfig() {
+            const res = await fetch('/api/admin/config', { headers: { 'x-admin-pass': adminToken } });
+            const cfg = await res.json();
+
+            document.getElementById('cfgBotName').value = cfg.botName || 'Revolution MD';
+            document.getElementById('cfgPrefix').value = cfg.prefix || '.';
+            document.getElementById('cfgOwnerNumber').value = cfg.ownerNumber || '50937081286';
+            document.getElementById('menuDisplayMode').value = cfg.menuDisplayMode || 'random';
+            document.getElementById('menuMediaUrls').value = (cfg.menuMedia || []).join(', ');
+
+            const apis = cfg.apiKeys || {};
+            document.getElementById('apiKeyGemini').value = apis.gemini || '';
+            document.getElementById('apiKeyRemovebg').value = apis.removebg || '';
+            document.getElementById('apiKeyOpenai').value = apis.openai || '';
+        }
+
+        async function saveMediaConfig() {
+            const mode = document.getElementById('menuDisplayMode').value;
+            const urls = document.getElementById('menuMediaUrls').value.split(',').map(s => s.trim()).filter(Boolean);
+
+            const res = await fetch('/api/admin/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-pass': adminToken },
+                body: JSON.stringify({ menuDisplayMode: mode, menuMedia: urls })
+            });
+            if (res.ok) document.getElementById('mediaSaveStatus').innerText = '✅ Médias mis à jour !';
+        }
+
+        async function saveApiConfig() {
+            const body = {
+                botName: document.getElementById('cfgBotName').value,
+                prefix: document.getElementById('cfgPrefix').value,
+                ownerNumber: document.getElementById('cfgOwnerNumber').value,
+                apiKeys: {
+                    gemini: document.getElementById('apiKeyGemini').value,
+                    removebg: document.getElementById('apiKeyRemovebg').value,
+                    openai: document.getElementById('apiKeyOpenai').value
+                }
+            };
+            const res = await fetch('/api/admin/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-pass': adminToken },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) document.getElementById('apiSaveStatus').innerText = '✅ Configuration enregistrée avec succès !';
+        }
+
+        async function postStatusBroadcast() {
+            const text = document.getElementById('broadcastStatusText').value.trim();
+            if (!text) return alert('Écrivez un texte de statut !');
+
+            const res = await fetch('/api/admin/post-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-pass': adminToken },
+                body: JSON.stringify({ text })
+            });
+            const data = await res.json();
+            document.getElementById('broadcastResult').innerText = ' ✅ ' + data.message;
+        }
+    </script>
+</body>
+</html>

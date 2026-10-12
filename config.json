@@ -1,0 +1,19 @@
+{
+  "botName": "Revolution MD",
+  "ownerName": "Mr Christ X",
+  "ownerNumber": "50937081286",
+  "prefix": ".",
+  "version": "v4.0 Zombie Edition",
+  "menuDisplayMode": "random",
+  "fixedMediaIndex": 0,
+  "menuMedia": [
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800",
+    "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800"
+  ],
+  "apiKeys": {
+    "gemini": "",
+    "removebg": "",
+    "openai": ""
+  },
+  "chatbotInstructions": "Tu es Revolution MD, un bot WhatsApp puissant cr\u00e9\u00e9 par Mr Christ X."
+}

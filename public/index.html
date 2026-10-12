@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>☣️ REVOLUTION MD - INFECTED ZONE ☣️</title>
+
+    <!-- ======================================================== -->
+    <!-- [EMPLACEMENT PUB 1] : VERIFICATION SITE & HEADER ADS -->
+    <!-- Collez votre balise meta de vérification Monetag ici -->
+    <!-- Exemple : <meta name="monetag" content="xxxxxx"> -->
+    <!-- Collez ici votre script Popunder / Vignette / In-Page Push -->
+    <!-- ======================================================== -->
+
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blood-red: #8a0303;
+            --bright-red: #ff073a;
+            --toxic-green: #39ff14;
+            --dark-abyss: #070709;
+            --rust-dark: #120d0d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--dark-abyss);
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(138, 3, 3, 0.3) 0%, transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(57, 255, 20, 0.08) 0%, transparent 50%),
+                linear-gradient(rgba(10, 5, 5, 0.85), rgba(5, 5, 5, 0.95));
+            color: #d1c7c7;
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Gouttes de sang en haut */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 18px;
+            background: radial-gradient(circle at 10px 0, var(--bright-red) 70%, transparent 75%) repeat-x;
+            background-size: 25px 25px;
+            opacity: 0.9;
+            filter: drop-shadow(0 4px 6px var(--bright-red));
+            z-index: 99;
+        }
+
+        /* Bannières Publicitaires Réservées */
+        .ad-container-top, .ad-container-bottom {
+            width: 100%;
+            max-width: 520px;
+            margin: 12px 0;
+            padding: 10px;
+            background: rgba(18, 13, 13, 0.6);
+            border: 1px dashed rgba(255, 7, 58, 0.4);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 11px;
+            color: #8b5555;
+            letter-spacing: 1px;
+        }
+
+        /* Carte d'horreur principale */
+        .hazard-card {
+            background: var(--rust-dark);
+            background-image: linear-gradient(145deg, #180d0d, #0b0707);
+            border: 2px solid var(--blood-red);
+            border-radius: 12px;
+            padding: 35px 28px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 0 35px rgba(138, 3, 3, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.9);
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(4px);
+        }
+
+        .hazard-badge {
+            display: inline-block;
+            background: rgba(138, 3, 3, 0.3);
+            border: 1px solid var(--bright-red);
+            color: var(--bright-red);
+            padding: 4px 12px;
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        h1.horror-title {
+            font-family: 'Nosifer', cursive;
+            color: var(--bright-red);
+            font-size: 26px;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 7, 58, 0.8), 0 0 20px black;
+        }
+
+        p.subtitle {
+            font-size: 13px;
+            color: #a89f9f;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--bright-red);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        input.blood-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(7, 7, 9, 0.9);
+            border: 2px solid #3d1414;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            font-family: 'Share Tech Mono', monospace;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input.blood-input:focus {
+            border-color: var(--bright-red);
+            box-shadow: 0 0 15px rgba(255, 7, 58, 0.5);
+        }
+
+        button.zombie-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(180deg, #990000 0%, #4d0000 100%);
+            border: 2px solid var(--bright-red);
+            border-radius: 8px;
+            color: #ffffff;
+            font-family: 'Creepster', cursive;
+            font-size: 22px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-shadow: 0 2px 4px black;
+            box-shadow: 0 6px 20px rgba(138, 3, 3, 0.7);
+        }
+
+        button.zombie-btn:hover {
+            background: linear-gradient(180deg, #b30000 0%, #660000 100%);
+            box-shadow: 0 0 25px var(--bright-red);
+            transform: scale(1.02);
+        }
+
+        #codeBox {
+            display: none;
+            margin-top: 25px;
+            padding: 18px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px dashed var(--toxic-green);
+            border-radius: 8px;
+            font-size: 26px;
+            color: var(--toxic-green);
+            letter-spacing: 6px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(57, 255, 20, 0.8);
+            animation: glitch 1.5s infinite alternate;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #5a4b4b;
+            text-align: center;
+        }
+
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 5px rgba(255, 7, 58, 0.3); }
+            to { box-shadow: 0 0 15px rgba(255, 7, 58, 0.9); }
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            50% { transform: translate(-1px, 1px); }
+            100% { transform: translate(1px, -1px); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ======================================================== -->
+    <!-- [EMPLACEMENT PUB 2] : BANNIÈRE NATIVE DU HAUT -->
+    <div class="ad-container-top" id="ad-banner-top">
+        <!-- Collez votre code bannière Monetag / Ads ici -->
+        <span>⚡ ESPACE PUBLICITAIRE RÉSERVÉ (TOP BANNER) ⚡</span>
+    </div>
+    <!-- ======================================================== -->
+
+    <div class="hazard-card">
+        <div class="hazard-badge">☣️ BIOHAZARD PROTOCOL ACTIVE ☣️</div>
+        <h1 class="horror-title">REVOLUTION MD</h1>
+        <p class="subtitle">Connexion infectée multi-sessions. Entrez votre numéro WhatsApp pour réveiller le virus et recevoir le code de chair.</p>
+
+        <div class="input-group">
+            <label>🩸 Numéro WhatsApp (Indicatif inclus, sans +)</label>
+            <input type="text" id="phone" class="blood-input" placeholder="ex: 50937081286">
+        </div>
+
+        <button class="zombie-btn" onclick="requestInfection()">OBTENIR LE PAIRING CODE 💀</button>
+
+        <div id="codeBox"></div>
+        <p class="footer-note">⚡ WhatsApp Multi-Device Baileys Engine • By Christ X ⚡</p>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- [EMPLACEMENT PUB 3] : BANNIÈRE NATIVE DU BAS -->
+    <div class="ad-container-bottom" id="ad-banner-bottom">
+        <!-- Collez votre code bannière Monetag / Ads ici -->
+        <span>⚡ ESPACE PUBLICITAIRE RÉSERVÉ (BOTTOM BANNER) ⚡</span>
+    </div>
+    <!-- ======================================================== -->
+
+    <!-- ======================================================== -->
+    <!-- [EMPLACEMENT PUB 4] : SCRIPT SMARTLINK AU CLIC -->
+    <!-- ======================================================== -->
+    <script>
+        // Si vous avez un SmartLink Monetag (Direct Link), collez l'URL ici :
+        const MONETAG_SMARTLINK_URL = ""; 
+
+        async function requestInfection() {
+            const phoneInput = document.getElementById('phone');
+            const codeBox = document.getElementById('codeBox');
+            const phone = phoneInput.value.trim().replace(/[^0-9]/g, '');
+
+            if (!phone || phone.length < 8) {
+                alert('⚠️ Entrez un numéro WhatsApp valide avant la contamination !');
+                return;
+            }
+
+            // Déclenchement SmartLink publicitaire dans un nouvel onglet si configuré
+            if (MONETAG_SMARTLINK_URL) {
+                window.open(MONETAG_SMARTLINK_URL, '_blank');
+            }
+
+            codeBox.style.display = 'block';
+            codeBox.style.color = '#ff073a';
+            codeBox.style.borderColor = '#ff073a';
+            codeBox.innerText = 'INFESTATION EN COURS...';
+
+            try {
+                const res = await fetch('/api/pairing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+                const data = await res.json();
+                
+                if (data.code) {
+                    codeBox.style.color = '#39ff14';
+                    codeBox.style.borderColor = '#39ff14';
+                    codeBox.innerText = data.code;
+                } else {
+                    codeBox.innerText = data.error || 'ÉCHEC INFECTION';
+                }
+            } catch (err) {
+                codeBox.innerText = 'ERREUR RESEAU SERVEUR';
+            }
+        }
+    </script>
+</body>
+</html>
