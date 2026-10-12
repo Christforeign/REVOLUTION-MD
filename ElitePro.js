@@ -1,4 +1,4 @@
-const { default: makeWaSocket, useMultiFileAuthState, BufferJSON, WA_DEFAULT_EPHEMERAL, generateWAMessageFromContent, proto, generateWAMessageContent, generateWAMessage, prepareWAMessageMedia, areJidsRevolution MDeUser, getContentType } = require('baileys')
+const { default: makeWaSocket, useMultiFileAuthState, BufferJSON, WA_DEFAULT_EPHEMERAL, generateWAMessageFromContent, proto, generateWAMessageContent, generateWAMessage, prepareWAMessageMedia, areJidsSameUser, getContentType } = require('baileys')
 const os = require('os')
 const fs = require('fs') 
 const fsx = require('fs-extra')
@@ -22,7 +22,7 @@ const more = String.fromCharCode(8206)
 const readmore = more.repeat(4001)
 const { webp2mp4File } = require('./lib/uploader')
 const { toAudio, toPTT, toVideo, ffmpeg, addExifAvatar } = require('./lib/converter')
-const { uploadToRevolution MDUrl, uploadToCatbox, uploadToEliteTempUrl } = require('./lib/urlclouds');
+const { uploadToEliteProTechUrl, uploadToCatbox, uploadToEliteTempUrl } = require('./lib/urlclouds');
 const { smsg, getGroupAdmins, formatp, jam, formatDate, getTime, isUrl, await, sleep, clockString, msToDate, sort, toNumber, enumGetKey, runtime, fetchJson, getBuffer, json, delay, format, logic, generateProfilePicture, parseMention, getRandom, pickRandom, reSize } = require('./lib/myfunc')
 const { checkPremiumUser } = require('./lib/premium')
 const { fetchBuffer, buffergif } = require("./lib/myfunc2")
@@ -30,7 +30,7 @@ const { fetchBuffer, buffergif } = require("./lib/myfunc2")
 //database
 let _owner = JSON.parse(fs.readFileSync('./database/owner.json'))
 let owner = JSON.parse(fs.readFileSync('./database/owner.json'))
-let Revolution MDpic = fs.readFileSync('./database/Revolution MDpic.jpg')
+let RevolutionMDpic = fs.existsSync('./database/elitepropic.jpg') ? fs.readFileSync('./database/elitepropic.jpg') : Buffer.alloc(0);
 const settingsFile = './database/settings.json'
 
 function saveSettings() {
@@ -65,7 +65,7 @@ function normalizeOwnerId(value) {
     return digits ? `${digits}@s.whatsapp.net` : ''
 }
 
-module.exports = async (Mr Christ X, m, chatUpdate, store) => {
+module.exports = async (sock, m, chatUpdate, store) => {
     try { const { type, quotedMsg, mentioned, now, fromMe } = m
         var body = (m.mtype === 'conversation') ? m.message.conversation :
            (m.mtype == 'imageMessage') ? m.message.imageMessage.caption :
@@ -95,7 +95,7 @@ module.exports = async (Mr Christ X, m, chatUpdate, store) => {
 		const full_args = isCmd ? (prefix === '' ? safeBody.trim().slice(command.length).trim() 
         : safeBody.slice(prefix.length).trim().slice(command.length).trim()) : '';
         const pushname = m.pushName || "user"
-        const botNumber = await Mr Christ X.decodeJid(Mr Christ X.user.id)
+        const botNumber = await sock.decodeJid(sock.user.id)
         const itsMe = m.sender == botNumber ? true : false
         const sender = m.sender
         const text = args.join(" ")
@@ -120,7 +120,7 @@ module.exports = async (Mr Christ X, m, chatUpdate, store) => {
         const isQuotedContact = type === 'extendedTextMessage' && content.includes('contactMessage')
         const isQuotedDocument = type === 'extendedTextMessage' && content.includes('documentMessage')
         const isGroup = m.key.remoteJid.endsWith('@g.us')
-        const groupMetadata = m.isGroup ? await Mr Christ X.groupMetadata(m.chat).catch(e => {}) : ''
+        const groupMetadata = m.isGroup ? await sock.groupMetadata(m.chat).catch(e => {}) : ''
         const groupName = m.isGroup ? groupMetadata.subject : ''
         const participants = m.isGroup ? await groupMetadata.participants : ''
         const groupAdmins = m.isGroup ? await getGroupAdmins(participants) : ''
@@ -128,13 +128,13 @@ module.exports = async (Mr Christ X, m, chatUpdate, store) => {
         const isAdmins = m.isGroup ? groupAdmins.includes(m.sender) : false
         const groupOwner = m.isGroup ? groupMetadata.owner : ''
         const isGroupOwner = m.isGroup ? (groupOwner ? groupOwner : groupAdmins).includes(m.sender) : false
-        const cleanLid = Mr Christ X.user?.lid ? Mr Christ X.user.lid.replace(/:\d+/, '') : '';
-        const cleanId = Mr Christ X.user?.id ? Mr Christ X.user.id.replace(/:\d+/, '') : '';
+        const cleanLid = sock.user?.lid ? sock.user.lid.replace(/:\d+/, '') : '';
+        const cleanId = sock.user?.id ? sock.user.id.replace(/:\d+/, '') : '';
         const ownerIds = [..._owner, cleanLid, cleanId].map(normalizeOwnerId).filter(Boolean)
         const isCreator = ownerIds.includes(normalizeOwnerId(m.sender))
         
 const reply = (teks) => {
-    Mr Christ X.sendMessage(
+    sock.sendMessage(
         m.chat,
         { text: teks },
         { quoted: m }
@@ -142,36 +142,36 @@ const reply = (teks) => {
 };
 
 if (autoread) {
-    await Mr Christ X.readMessages([m.key]).catch(() => {})
+    await sock.readMessages([m.key]).catch(() => {})
 }
 
 if (global.autoTyping) {
-    await Mr Christ X.sendPresenceUpdate('composing', from).catch(() => {})
+    await sock.sendPresenceUpdate('composing', from).catch(() => {})
 }
 
 if (global.autoRecording) {
-    await Mr Christ X.sendPresenceUpdate('recording', from).catch(() => {})
+    await sock.sendPresenceUpdate('recording', from).catch(() => {})
 }
 
 /*
 // bot number online status, available = online, unavailable = offline
 if (autoOffline) {
-    await Mr Christ X.sendPresenceUpdate('unavailable', from).catch(() => {})
+    await sock.sendPresenceUpdate('unavailable', from).catch(() => {})
 }
 */
 
 if (global.autorecordtype) {
     let eliterecordin = ['recording', 'composing']
     let eliterecordinfinal = eliterecordin[Math.floor(Math.random() * eliterecordin.length)]
-    await Mr Christ X.sendPresenceUpdate(eliterecordinfinal, from).catch(() => {})
+    await sock.sendPresenceUpdate(eliterecordinfinal, from).catch(() => {})
 }
 
-if (!Mr Christ X.public) {
+if (!sock.public) {
     if (!isCreator && !m.key.fromMe) return
 }
 
 if (autobio) {
-    Mr Christ X.updateProfileStatus(
+    sock.updateProfileStatus(
         `ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ ɪꜱ ɴᴏᴡ ᴀᴄᴛɪᴠᴇ ❯ ϙᴜᴏᴛᴇꜱ: ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛᴏ ʙᴇ ɢʀᴇᴀᴛ ᴛᴏ ꜱᴛᴀʀᴛ, ʙᴜᴛ ʏᴏᴜ ʜᴀᴠᴇ ᴛᴏ ꜱᴛᴀʀᴛ ᴛᴏ ʙᴇ ɢʀᴇᴀᴛ. 🚀`
     ).catch(() => {})
 }
@@ -202,7 +202,7 @@ switch (command) {
 case 'ping': {
     const sharp = require('sharp')
     const start = performance.now()
-    await Mr Christ X.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } })
+    await sock.sendMessage(m.chat, { react: { text: "⚙️", key: m.key } })
     function formatUptime(seconds) {
         const d = Math.floor(seconds / 86400)
         seconds %= 86400
@@ -212,9 +212,9 @@ case 'ping': {
         const s = Math.floor(seconds % 60)
         return `${d > 0 ? d + 'd ' : ''}${h}h ${m}m ${s}s`
     }
-    let profilepuser = Revolution MDpic
+    let profilepuser = RevolutionMDpic
     try {
-        const ppUrl = await Mr Christ X.profilePictureUrl(m.sender, 'image')
+        const ppUrl = await sock.profilePictureUrl(m.sender, 'image')
         const { data } = await axios.get(ppUrl, {
             responseType: 'arraybuffer',
             timeout: 5000
@@ -238,7 +238,7 @@ case 'ping': {
         }
     }
     const latency = Math.floor(performance.now() - start)
-    await Mr Christ X.sendMessage(m.chat, { text: `*🌩️ 𝐁𝐨𝐭 𝐏๏፝֟ƞ̽g ${latency} 𝐌ʂ*` }, { quoted: fakeQuoted })
+    await sock.sendMessage(m.chat, { text: `*🌩️ 𝐁𝐨𝐭 𝐏๏፝֟ƞ̽g ${latency} 𝐌ʂ*` }, { quoted: fakeQuoted })
 }
 break
 case 'alive':
@@ -285,7 +285,7 @@ END:VCARD`
     const totalRam = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2)
     const freeRam = (os.freemem() / 1024 / 1024 / 1024).toFixed(2)
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       text: `🤖 *${botname} is Alive!*
 *⌜ System Info ⌟*
 
@@ -310,7 +310,7 @@ case 'readmore': {
 	let [l, r] = text.split`|`
     if (!l) l = ''
     if (!r) r = ''
-    Mr Christ X.sendMessage(m.chat, {text: l + readmore + r}, {quoted: m})
+    sock.sendMessage(m.chat, {text: l + readmore + r}, {quoted: m})
 }
 			break
 			case 'define': 
@@ -325,7 +325,7 @@ Definition:* ${targetfine.data.list[0].definition
 Example:* ${targetfine.data.list[0].example
     .replace(/\[/g, "")
     .replace(/\]/g, "")}`
-   Mr Christ X.sendMessage(m.chat,{text:reply},{quoted:m})
+   sock.sendMessage(m.chat,{text:reply},{quoted:m})
 } catch (err) {
     console.log(err)
     return reply(`*${q}* isn't a valid text`)
@@ -339,7 +339,7 @@ if (!m.isGroup) return reply(mess.group)
 if (!isAdmins && !isGroupOwner && !isCreator) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
 
-    const meta = await Mr Christ X.groupMetadata(m.chat);
+    const meta = await sock.groupMetadata(m.chat);
     const participants = meta.participants;
 
     let vcard = "";
@@ -351,7 +351,7 @@ if (!isBotAdmins) return reply(mess.botAdmin)
         let number = rawJid.split("@")[0];
         let waName;
         try {
-            waName = await Mr Christ X.getName(rawJid);
+            waName = await sock.getName(rawJid);
         } catch {
             waName = number;
         }
@@ -370,7 +370,7 @@ END:VCARD
     fs.writeFileSync(filePath, vcard.trim());
 
     await sleep(1500);
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
         m.chat,
         {
             document: fs.readFileSync(filePath),
@@ -391,7 +391,7 @@ let snTak = text.split(' ')[1] ? text.split(' ')[1] : 'Contact'
 let snContact = {
 	displayName: "Contact", contacts: [{displayName: snTak, vcard: "BEGIN:VCARD\nVERSION:3.0\nN:;"+snTak+";;;\nFN:"+snTak+"\nitem1.TEL;waid="+m.mentionedJid[0].split('@')[0]+":"+m.mentionedJid[0].split('@')[0]+"\nitem1.X-ABLabel:Mobile\nEND:VCARD"}]
 }
-Mr Christ X.sendMessage(m.chat, {contacts: snContact}, {ephemeralExpiration: 86400})
+sock.sendMessage(m.chat, {contacts: snContact}, {ephemeralExpiration: 86400})
 }
 //Contact tag
 break
@@ -404,32 +404,32 @@ let sngTak = text.split(' ')[1] ? text.split(' ')[1] : 'Contact'
 let sngContact = {
 	displayName: "Contact", contacts: [{displayName: sngTak, vcard: "BEGIN:VCARD\nVERSION:3.0\nN:;"+sngTak+";;;\nFN:"+sngTak+"\nitem1.TEL;waid="+m.mentionedJid[0].split('@')[0]+":"+m.mentionedJid[0].split('@')[0]+"\nitem1.X-ABLabel:Mobile\nEND:VCARD"}]
 }
-Mr Christ X.sendMessage(m.chat, {contacts: sngContact, mentions: participants.map(a => a.id)}, {ephemeralExpiration: 86400})
+sock.sendMessage(m.chat, {contacts: sngContact, mentions: participants.map(a => a.id)}, {ephemeralExpiration: 86400})
 }
 break
 case 'flux': {
     try {
         if (!q) return reply(`⚠️ Example: *${prefix + command} car*`)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🎨', key: m.key }
         })
 
         const apiUrl = `https://omegatech-api.dixonomega.tech/api/ai/magicstudio?prompt=${encodeURIComponent(q)}`
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: { url: apiUrl },
             caption: `✅ *Flux Image for:* ${q}`
         }, { quoted: m })
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
     } catch (e) {
         console.error('Error generating flux image')
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -444,12 +444,12 @@ case 'tiktok': {
         )
     }
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "📥", key: m.key }
         });
 
         if (text.startsWith("http")) {
-            const apiUrl = `https://Revolution MD-apis.zone.id/download/tiktok2?url=${encodeURIComponent(text)}`;
+            const apiUrl = `https://elitepro-apis.zone.id/download/tiktok2?url=${encodeURIComponent(text)}`;
             const { data } = await axios.get(apiUrl);
 
             if (!data.success || !data.data) {
@@ -475,7 +475,7 @@ case 'tiktok': {
 
 > *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`;
 
-            return await Mr Christ X.sendMessage(
+            return await sock.sendMessage(
                 m.chat,
                 {
                     video: { url: videoUrl },
@@ -485,7 +485,7 @@ case 'tiktok': {
                 { quoted: m }
             );
         }
-        const searchUrl = `https://Revolution MD-apis.zone.id/search/tiktoksearch?q=${encodeURIComponent(text)}`;
+        const searchUrl = `https://elitepro-apis.zone.id/search/tiktoksearch?q=${encodeURIComponent(text)}`;
         const { data } = await axios.get(searchUrl);
 
         if (data?.error || !data?.results?.length) {
@@ -501,7 +501,7 @@ case 'tiktok': {
 
 > *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`;
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 video: { url: first.play },
@@ -521,9 +521,9 @@ case 'tiktokstalk': case 'tiktoksearch': {
     if (!text) return reply(`*Example:* ${prefix + command} username`);
     
     try {
-        await Mr Christ X.sendMessage(m.chat, { react: { text: "🔍", key: m.key } });
+        await sock.sendMessage(m.chat, { react: { text: "🔍", key: m.key } });
         
-        const apiUrl = `https://Revolution MD-apis.zone.id/search/tiktokstalk?username=${encodeURIComponent(text)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/search/tiktokstalk?username=${encodeURIComponent(text)}`;
         const { data } = await axios.get(apiUrl);
         
         if (!data || data.status !== "success" || !data.data) {
@@ -547,7 +547,7 @@ case 'tiktokstalk': case 'tiktoksearch': {
 > *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*
 `;
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: { url: user.avatar },
             caption: userInfo
         }, { quoted: m });
@@ -562,9 +562,9 @@ case 'mediafire': {
     if (!text) return reply(`*Example:* ${prefix + command} https://www.mediafire.com/file/xxxxx/fichier.zip/file`);
     
     try {
-        await Mr Christ X.sendMessage(m.chat, { react: { text: `📥`, key: m?.key } });
+        await sock.sendMessage(m.chat, { react: { text: `📥`, key: m?.key } });
         
-        const apiUrl = `https://Revolution MD-apis.zone.id/download/mediafire?url=${encodeURIComponent(text)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/download/mediafire?url=${encodeURIComponent(text)}`;
         const { data } = await axios.get(apiUrl);
 
         if (data?.status && data?.download) {
@@ -576,7 +576,7 @@ case 'mediafire': {
                 download
             } = data;
 
-            await Mr Christ X.sendMessage(
+            await sock.sendMessage(
                 m.chat,
                 {
                     document: { url: download },
@@ -628,7 +628,7 @@ case 'wallpaper': {
     const selectedImages = randomIndexes.map(i => imageUrls[i]);
     
     for (let i = 0; i < selectedImages.length; i++) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         image: { url: selectedImages[i] },
         caption: `🎨 *Wallpaper Search*\n\n📄 Search: "${text}"\n🖼 Wallpaper ${i + 1}/${maxResults}\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`,
       }, { quoted: m });
@@ -656,12 +656,12 @@ case 'getpp': {
     } else if (m.isGroup) {
         let groupPP;
         try {
-            groupPP = await Mr Christ X.profilePictureUrl(m.chat, 'image');
+            groupPP = await sock.profilePictureUrl(m.chat, 'image');
         } catch {
             groupPP = defaultPP;
         }
         
-        return await Mr Christ X.sendMessage(m.chat, {
+        return await sock.sendMessage(m.chat, {
             image: { url: groupPP },
             caption: `*Group Profile Picture*`
         }, { quoted: m });
@@ -669,12 +669,12 @@ case 'getpp': {
     
     let pp;
     try {
-        pp = await Mr Christ X.profilePictureUrl(target, 'image');
+        pp = await sock.profilePictureUrl(target, 'image');
     } catch {
         pp = defaultPP;
     }
     
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         image: { url: pp },
         caption: `*@${target.split('@')[0]} profile picture*`,
         mentions: [target]
@@ -692,7 +692,7 @@ case 'getgrouppp': case 'groupprofile': {
     if (input.includes('chat.whatsapp.com/')) {
         const inviteCode = input.split('chat.whatsapp.com/')[1];
         try {
-            const groupInfo = await Mr Christ X.groupGetInviteInfo(inviteCode);
+            const groupInfo = await sock.groupGetInviteInfo(inviteCode);
             groupJid = groupInfo.id;
         } catch {
             return reply('Invalid or expired group link.');
@@ -705,12 +705,12 @@ case 'getgrouppp': case 'groupprofile': {
     
     let groupPP;
     try {
-        groupPP = await Mr Christ X.profilePictureUrl(groupJid, 'image');
+        groupPP = await sock.profilePictureUrl(groupJid, 'image');
     } catch {
         groupPP = defaultPP;
     }
     
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         image: { url: groupPP },
         caption: `*Group Profile Picture*`
     }, { quoted: m });
@@ -730,7 +730,7 @@ case 'play':
 case 'ytmp3': {
     if (!text) return reply(`*Example:* ${prefix + command} Faded by Alan Walker`);
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🎵', key: m.key }
         });
         const ytRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/i;
@@ -742,7 +742,7 @@ case 'ytmp3': {
             const search = await yts(text);
             video = search.videos[0];
             if (!video) {
-                await Mr Christ X.sendMessage(m.chat, {
+                await sock.sendMessage(m.chat, {
                     react: { text: '❌', key: m.key }
                 });
                 return reply(`*No results found for:* ${text}`);
@@ -764,17 +764,17 @@ case 'ytmp3': {
 ┃ *Enjoy your music®*
 ╰━━━━━━━━━━━━━━━━━━┈⊷
 > *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`;
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 image: { url: video.thumbnail },
                 caption: body
             }, { quoted: m });
         }
-        const apiUrl = `https://Revolution MD-apis.zone.id/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
         const { data } = await axios.get(apiUrl, {
             timeout: 120000
         });
         if (!data?.status || !data?.download?.downloadUrl) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: '❌', key: m.key }
             });
             return reply('*❌ Failed to fetch the song! Try again later.*');
@@ -788,18 +788,18 @@ case 'ytmp3': {
             maxBodyLength: 50 * 1024 * 1024
         });
         const audioBuffer = Buffer.from(audioResponse.data);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             audio: audioBuffer,
             mimetype: 'audio/mpeg',
             fileName,
             ptt: false
         }, { quoted: m });
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         });
     } catch (error) {
         console.error('Play command error:', error);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '⚠️', key: m.key }
         });
         return reply('_*An error occurred while downloading the song.*_');
@@ -811,7 +811,7 @@ case 'ytmp4': {
     if (!text) return reply(`*Example:* ${prefix + command} Faded by Alan Walker`);
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `📽️`, key: m.key }
         });
 
@@ -851,7 +851,7 @@ case 'ytmp4': {
                 `╰━━━━━━━━━━━━━━━━━━┈⊷\n` +
                 `> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`;
 
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 image: { url: video.thumbnail },
                 caption: info
             }, { quoted: m });
@@ -865,20 +865,20 @@ case 'ytmp4': {
             return reply('❌ Failed to fetch video download link. Please try again later.');
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             video: { url: data.download },
             mimetype: 'video/mp4',
             caption: `🎬 *${data.title || videoTitle || "YouTube Video"}*\n> ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ`
         }, { quoted: m });
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `✅`, key: m.key }
         });
 
     } catch (error) {
         console.error(error);
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `❌`, key: m.key }
         });
 
@@ -890,14 +890,14 @@ case 'anime': {
   if (!text) return reply(`*Example*: ${prefix + command} Anime`);
   
   try {
-    await Mr Christ X.sendMessage(m.chat, { react: { text: `🎨`, key: m.key } });
+    await sock.sendMessage(m.chat, { react: { text: `🎨`, key: m.key } });
     
     const apiUrlForImages = `https://img.hazex.workers.dev/?prompt=${encodeURIComponent(text)}`;
     
     // Generate and send 5 images
     const footer = "\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*";
     for (let i = 0; i < 5; i++) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         image: { url: apiUrlForImages }, // URL is already constructed
         caption: footer
       }, { quoted: m });
@@ -932,7 +932,7 @@ case 'chatgpt': {
             return reply(`Hi ${pushname || 'there'} 👋\nReply to a message or type a question.`);
         }
         const sender = m.sender;
-        const msg = await Mr Christ X.sendMessage(
+        const msg = await sock.sendMessage(
             m.chat,
             {
                 text: `✦ Generating response @${sender.split('@')[0]}...`,
@@ -940,12 +940,12 @@ case 'chatgpt': {
             },
             { quoted: m }
         );
-        const apiUrl = `https://Revolution MD-apis.zone.id/ai/notegpt?prompt=${encodeURIComponent(userMessage)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/ai/notegpt?prompt=${encodeURIComponent(userMessage)}`;
         const { data } = await axios.get(apiUrl, {
             timeout: 60000
         });
         if (!data?.success || !data?.text) {
-            return await Mr Christ X.sendMessage(
+            return await sock.sendMessage(
                 m.chat,
                 {
                     text: '❌ AI failed to generate a response.',
@@ -954,7 +954,7 @@ case 'chatgpt': {
             );
         }
         const finalText = data.text;
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 text: finalText,
@@ -971,7 +971,7 @@ case 'lyrics': {
     if (!q) return reply('Please provide a song name. Usage: .lyrics <song name>');
     
     try {
-        const url = `https://Revolution MD-apis.zone.id/search/lyrics?query=${encodeURIComponent(q)}`;
+        const url = `https://elitepro-apis.zone.id/search/lyrics?query=${encodeURIComponent(q)}`;
         const { data } = await axios.get(url);
         
         if (!data.success || !data.result || data.result.length === 0) {
@@ -980,7 +980,7 @@ case 'lyrics': {
         
         const song = data.result[0];
         const caption = `🎵 *${song.trackName || song.name}*\n👤 Artist: ${song.artistName}\n💿 Album: ${song.albumName}\n\n📜 *Lyrics:*\n${song.plainLyrics}`;
-        await Mr Christ X.sendMessage(from, {
+        await sock.sendMessage(from, {
             text: caption
         });
         
@@ -1003,7 +1003,7 @@ case 'truth': {
       const truthQuestion = response.data.question;
 
 
-      Mr Christ X.sendMessage(from, {
+      sock.sendMessage(from, {
         image: { url: imagePath },
         caption: `${userTag}, you chose *TRUTH*!\n\n*Question:* ${truthQuestion}\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`,
         mentions: [m.sender],
@@ -1027,7 +1027,7 @@ case 'truth': {
 case 'yts':
 case 'ytsearch': {
     if (!text) return reply(`❌ Example: ${prefix + command} Alan Walker Alone`);
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: "⏳", key: m.key }
     });
     try {
@@ -1048,7 +1048,7 @@ case 'ytsearch': {
 
 `;
         }
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 image: {
@@ -1060,12 +1060,12 @@ case 'ytsearch': {
                 quoted: m
             }
         );
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "✅", key: m.key }
         });
     } catch (err) {
         console.error("YTS Error:", err);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "❌", key: m.key }
         });
         reply(`❌ Error fetching results:\n${err.message}`);
@@ -1093,13 +1093,13 @@ case 'tiny': case 'shorturl': {
     console.log('API Response:', response.data);
     
     // Send the shortened URL as a message
-    await Mr Christ X.sendMessage(from, {
+    await sock.sendMessage(from, {
       text: `Here is your shortened URL: ${response.data}`,
     }, { quoted: m });
     
   } catch (error) {
     console.error('Error shortening URL:', error.message);
-    await Mr Christ X.sendMessage(from, {
+    await sock.sendMessage(from, {
       text: 'Error shortening URL. Please check the URL format or try again later.',
     }, { quoted: m });
   }
@@ -1123,13 +1123,13 @@ case 'google': {
       tex += `🪧 *Title:* ${data.items[i].title}\n🖥 *Description:* ${data.items[i].snippet}\n🌐 *Link:* ${data.items[i].link}\n\n`;
     }
     
-    await Mr Christ X.sendMessage(from, {
+    await sock.sendMessage(from, {
       text: tex.trim(),
     }, { quoted: m });
     
   } catch (error) {
     console.error('Error occurred:', error);
-    await Mr Christ X.sendMessage(from, {
+    await sock.sendMessage(from, {
       text: '❌ Something went wrong with the Google search.',
     }, { quoted: m });
   }
@@ -1153,7 +1153,7 @@ case 'gitclone': {
         // Fallback filename in case HEAD fails
         const filename = `${repo}.zip`
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             document: { url: zipUrl },
             fileName: filename,
             mimetype: 'application/zip'
@@ -1227,7 +1227,7 @@ case 'welcome': {
 break
 case 'insult': {
     try {
-        const res = await fetch('https://Revolution MD-apis.zone.id/fun/insult')
+        const res = await fetch('https://elitepro-apis.zone.id/fun/insult')
         
         if (!res.ok) {
             throw new Error(`API request failed with status ${res.status}`)
@@ -1270,21 +1270,21 @@ case 'loli': {
   let baseUrl = 'https://weeb-api.vercel.app/'
   const response = await fetch(baseUrl + command)
   const imageBuffer = await response.buffer() // Get the image data as a buffer
-  Mr Christ X.sendMessage(m.chat, { image: imageBuffer, caption: `Random ${command} for you!✨` }, { quoted: m })
+  sock.sendMessage(m.chat, { image: imageBuffer, caption: `Random ${command} for you!✨` }, { quoted: m })
 }
 break
 case 'waifu': {
   let baseUrl = 'https://weeb-api.vercel.app/'
   const response = await fetch(baseUrl + command)
   const imageBuffer = await response.buffer() // Get the image data as a buffer
-  Mr Christ X.sendMessage(m.chat, { image: imageBuffer, caption: `Random ${command} for you!✨` }, { quoted: m })
+  sock.sendMessage(m.chat, { image: imageBuffer, caption: `Random ${command} for you!✨` }, { quoted: m })
 }
 break
 case 'neko': {
   let baseUrl = 'https://weeb-api.vercel.app/'
   const response = await fetch(baseUrl + command)
   const imageBuffer = await response.buffer() // Get the image data as a buffer
-  Mr Christ X.sendMessage(m.chat, { image: imageBuffer, caption: `Random ${command} for you!✨` }, { quoted: m })
+  sock.sendMessage(m.chat, { image: imageBuffer, caption: `Random ${command} for you!✨` }, { quoted: m })
 } 
 break
 case 'ssweb':
@@ -1297,14 +1297,14 @@ case 'screenshot': {
         url = 'https://' + url
     }
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: '🖼️', key: m.key }
     })
 
     try {
-        const apiUrl = `https://Revolution MD-apis.zone.id/tools/ssweb?url=${encodeURIComponent(url)}`
+        const apiUrl = `https://elitepro-apis.zone.id/tools/ssweb?url=${encodeURIComponent(url)}`
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 image: { url: apiUrl },
@@ -1313,14 +1313,14 @@ case 'screenshot': {
             { quoted: m }
         )
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
     } catch (error) {
         console.log('SSWeb error:', error.message)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -1347,19 +1347,19 @@ case 'vv': {
         const caption = quotedMsg.text || quotedMsg.caption || '';
         
         if (/image/.test(mime)) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 image: media,
                 caption: `${caption}`
             }, { quoted: m });
             
         } else if (/video/.test(mime)) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 video: media,
                 caption: `${caption}`
             }, { quoted: m });
             
         } else if (/audio/.test(mime)) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 audio: media,
                 mimetype: 'audio/mp4'
             }, { quoted: m });
@@ -1378,9 +1378,9 @@ case 'vvdm': {
     if (!m.quoted) return reply(`⚠️ Please reply to a *view-once* image, video, or audio.`);
     
     try {
-        const ownerNumber = Mr Christ X.user.id.split(':')[0] + '@s.whatsapp.net';
+        const ownerNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "👄", key: m.key }
         });
         
@@ -1398,19 +1398,19 @@ case 'vvdm': {
         
         // Send media directly to OWNER’s DM instead of user
         if (/image/.test(mime)) {
-            await Mr Christ X.sendMessage(ownerNumber, {
+            await sock.sendMessage(ownerNumber, {
                 image: media,
                 caption: `${caption}`
             }, { quoted: m });
             
         } else if (/video/.test(mime)) {
-            await Mr Christ X.sendMessage(ownerNumber, {
+            await sock.sendMessage(ownerNumber, {
                 video: media,
                 caption: `${caption}`
             }, { quoted: m });
             
         } else if (/audio/.test(mime)) {
-            await Mr Christ X.sendMessage(ownerNumber, {
+            await sock.sendMessage(ownerNumber, {
                 audio: media,
                 mimetype: 'audio/mp4',
                 ptt: false,
@@ -1422,13 +1422,13 @@ case 'vvdm': {
         }
         
         // React ✅ after success
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "✅", key: m.key }
         });
         
     } catch (error) {
         console.error("Error opening view-once message:", error);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "❌", key: m.key }
         });
     }
@@ -1437,7 +1437,7 @@ break
 case 'song': {
     if (!text) return reply(`*Example*: ${prefix + command} Faded by Alan Walker or YouTube URL`);
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `🎶`, key: m.key }
         });
         let videoUrl;
@@ -1456,7 +1456,7 @@ case 'song': {
             videoUrl = video.url;
         }
         videoTitle = video.title;
-        const apiUrl = `https://Revolution MD-apis.zone.id/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/download/ytmp3?url=${encodeURIComponent(videoUrl)}`;
         const { data } = await axios.get(apiUrl);
         if (data?.status && data?.download?.downloadUrl) {
             const downloadUrl = data.download.downloadUrl;
@@ -1469,7 +1469,7 @@ case 'song': {
                 }
             });
             const audioBuffer = Buffer.from(response.data);
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 document: audioBuffer,
                 fileName: filename,
                 mimetype: 'audio/mpeg',
@@ -1479,7 +1479,7 @@ case 'song': {
                     isForwarded: true
                 }
             }, { quoted: m });
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: `✅`, key: m.key }
             });
         } else {
@@ -1487,7 +1487,7 @@ case 'song': {
         }
     } catch (error) {
         console.error('Song Downloader Error:', error);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `❌`, key: m.key }
         });
         reply(`❌ An error occurred while downloading.`);
@@ -1496,14 +1496,14 @@ case 'song': {
 }
 case 'animeavatar': {
     waifudd = await axios.get(`https://nekos.life/api/v2/img/avatar`)
-    await Mr Christ X.sendMessage(m.chat, { image: { url: waifudd.data.url }, caption: mess.success }, { quoted: m }).catch(err => {
+    await sock.sendMessage(m.chat, { image: { url: waifudd.data.url }, caption: mess.success }, { quoted: m }).catch(err => {
       return ('Error!')
     })
   }
   break
   case '8ballpool': {
     waifudd = await axios.get(`https://nekos.life/api/v2/img/8ball`)
-    await Mr Christ X.sendMessage(m.chat, { image: { url: waifudd.data.url }, caption: mess.success }, { quoted: m }).catch(err => {
+    await sock.sendMessage(m.chat, { image: { url: waifudd.data.url }, caption: mess.success }, { quoted: m }).catch(err => {
       return ('Error!')
     })
   }  
@@ -1511,55 +1511,55 @@ break
 case 'stickkill': {
   axios.get(`https://api.waifu.pics/sfw/kill`)
   .then(({ data }) => {
-    Mr Christ X.sendImageAsSticker(from, data.url, m, { packname: global.packname, author: global.author })
+    sock.sendImageAsSticker(from, data.url, m, { packname: global.packname, author: global.author })
   })
 }  
 break
 case 'animeblush':{
  waifudd = await axios.get(`https://waifu.pics/api/sfw/blush`)       
-            await Mr Christ X.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
+            await sock.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
                     return('Error!')
                 })
                 }
 break
 case 'animewave':{
  waifudd = await axios.get(`https://waifu.pics/api/sfw/wave`)       
-            await Mr Christ X.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
+            await sock.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
                     return('Error!')
                 })
                 }
 break
 case 'animesmile':{
  waifudd = await axios.get(`https://waifu.pics/api/sfw/smile`)       
-            await Mr Christ X.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
+            await sock.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
                     return('Error!')
                 })
                 }
 break
 case 'animepoke':{
  waifudd = await axios.get(`https://waifu.pics/api/sfw/poke`)       
-            await Mr Christ X.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
+            await sock.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
                     return('Error!')
                 })
                 }
 break
 case 'animewink':{
  waifudd = await axios.get(`https://waifu.pics/api/sfw/wink`)       
-            await Mr Christ X.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
+            await sock.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
                     return('Error!')
                 })
                 }
 break
 case 'animebonk':{
  waifudd = await axios.get(`https://waifu.pics/api/sfw/bonk`)       
-            await Mr Christ X.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
+            await sock.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
                     return('Error!')
                 })
                 }
 break
 case 'animebully':{
  waifudd = await axios.get(`https://waifu.pics/api/sfw/bully`)       
-            await Mr Christ X.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
+            await sock.sendMessage(m.chat, { image: { url:waifudd.data.url} , caption: mess.success}, { quoted:m }).catch(err => {
                     return('Error!')
                 })
                 }
@@ -1571,7 +1571,7 @@ case 'bible': {
         }
         
         const query = encodeURIComponent(text)
-        const url = `https://Revolution MD-apis.zone.id/search/bible?q=${query}`
+        const url = `https://elitepro-apis.zone.id/search/bible?q=${query}`
         
         const { data } = await axios.get(url)
         
@@ -1623,7 +1623,7 @@ break
 case 'quran': {
     if (!text) return reply(`🕌 Please enter surah number or name.\n\nExample: ${prefix + command} 1`)
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: '🕌', key: m.key }
     })
 
@@ -1671,7 +1671,7 @@ ${translatedTafsirEnglish.text}`
         await reply(quranSurah)
 
         if (json.data.recitation?.full) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 audio: { url: json.data.recitation.full },
                 mimetype: 'audio/mpeg',
                 ptt: false,
@@ -1679,14 +1679,14 @@ ${translatedTafsirEnglish.text}`
             }, { quoted: m })
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
     } catch (error) {
         console.log('Quran error:', error.message)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -1703,7 +1703,7 @@ ${translatedTafsirEnglish.text}`
 *Group Admins:*
 ${listAdmin}
 `.trim()
-    Mr Christ X.sendMessage(m.chat, { text: text, mentions: [...groupAdmins.map(v => v.id), owner] }, { quoted: m })
+    sock.sendMessage(m.chat, { text: text, mentions: [...groupAdmins.map(v => v.id), owner] }, { quoted: m })
   }  
 break
 case 'statusd':
@@ -1715,7 +1715,7 @@ case 'save': {
         let caption = m.quoted.text || m.quoted.caption || '';
         
         // React ⏳ (processing started)
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "💱", key: m.key }
         });
         
@@ -1724,17 +1724,17 @@ case 'save': {
             let media = await m.quoted.download();
             
             if (/image/.test(mime)) {
-                await Mr Christ X.sendMessage(m.sender, {
+                await sock.sendMessage(m.sender, {
                     image: media,
                     caption: `${caption}\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`
                 }, { quoted: m });
             } else if (/video/.test(mime)) {
-                await Mr Christ X.sendMessage(m.sender, {
+                await sock.sendMessage(m.sender, {
                     video: media,
                     caption: `${caption}\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`
                 }, { quoted: m });
             } else if (/audio/.test(mime)) {
-                await Mr Christ X.sendMessage(m.sender, {
+                await sock.sendMessage(m.sender, {
                     audio: media,
                     mimetype: 'audio/mp4',
                     ptt: false,
@@ -1746,7 +1746,7 @@ case 'save': {
             
         } else if (caption) {
             // Handle text-only status
-            await Mr Christ X.sendMessage(m.sender, {
+            await sock.sendMessage(m.sender, {
                 text: `${caption}\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`
             }, { quoted: m });
         } else {
@@ -1754,7 +1754,7 @@ case 'save': {
         }
         
         // React ✅ (success)
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "✅", key: m.key }
         });
         
@@ -1762,7 +1762,7 @@ case 'save': {
         console.error("Error processing status:", error);
         
         // React ❌ (failure)
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "❌", key: m.key }
         });
     }
@@ -1788,7 +1788,7 @@ case 'tts': {
 
         const voice = await toPTT(Buffer.from(res.data), 'mp3')
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 audio: voice,
@@ -1829,7 +1829,7 @@ case 'sps': {
     })
 
     // send with thumbnail of first result
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       image: { url: results[0].imageUrl },
       caption: teks
     }, { quoted: m })
@@ -1847,7 +1847,7 @@ case 'splay': {
             return reply(`⚠️ Example:\n${prefix + command} alan walker alone\n${prefix + command} https://open.spotify.com/track/...`)
         }
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🎧', key: m.key }
         })
 
@@ -1865,7 +1865,7 @@ case 'splay': {
             spotifyUrl = first.trackUrl
         }
 
-        const apiUrl = `https://Revolution MD-apis.zone.id/download/spotify?url=${encodeURIComponent(spotifyUrl)}`
+        const apiUrl = `https://elitepro-apis.zone.id/download/spotify?url=${encodeURIComponent(spotifyUrl)}`
         const { data } = await axios.get(apiUrl)
 
         if (!data || !data.success) {
@@ -1875,7 +1875,7 @@ case 'splay': {
         const meta = data.data.metadata
         const downloadUrl = data.data.download
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             audio: { url: downloadUrl },
             mimetype: 'audio/mpeg',
             fileName: `${meta.title}.mp3`,
@@ -1891,7 +1891,7 @@ case 'splay': {
             }
         }, { quoted: m })
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
@@ -2049,8 +2049,8 @@ if (!antilinkData[m.chat]) {
 }
 
 if (!args[0]) {
-    return Mr Christ X.sendMessage(m.chat, {
-        image: Revolution MDpic,
+    return sock.sendMessage(m.chat, {
+        image: RevolutionMDpic,
         caption: `⿻ *ANTILINK SETTINGS*
 
 🔘 Status: *${antilinkData[m.chat].enabled ? 'ON' : 'OFF'}*
@@ -2075,8 +2075,8 @@ if (args[0].toLowerCase() === 'on') {
         JSON.stringify(antilinkData, null, 2)
     )
 
-    return Mr Christ X.sendMessage(m.chat, {
-        image: Revolution MDpic,
+    return sock.sendMessage(m.chat, {
+        image: RevolutionMDpic,
         caption: `✅ *ANTILINK ENABLED*
 
 ╭───────────────━⊷
@@ -2098,8 +2098,8 @@ if (args[0].toLowerCase() === 'off') {
         JSON.stringify(antilinkData, null, 2)
     )
 
-    return Mr Christ X.sendMessage(m.chat, {
-        image: Revolution MDpic,
+    return sock.sendMessage(m.chat, {
+        image: RevolutionMDpic,
         caption: '🔄 *ANTILINK DISABLED!*\n\nLinks are now allowed in this group.'
     }, { quoted: m })
 }
@@ -2118,8 +2118,8 @@ if (args[0].toLowerCase() === 'action' && args[1]) {
         JSON.stringify(antilinkData, null, 2)
     )
 
-    return Mr Christ X.sendMessage(m.chat, {
-        image: Revolution MDpic,
+    return sock.sendMessage(m.chat, {
+        image: RevolutionMDpic,
         caption: `⚙️ *ANTILINK ACTION UPDATED*
 
 New Action: *${action.toUpperCase()}*`
@@ -2226,7 +2226,7 @@ try {
     
     // Send messages to the current batch
     await Promise.all(batch.map(participant =>
-      Mr Christ X.sendMessage(participant, { text: `*GROUP BROADCAST*\n*Message:* ${message}\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`})
+      sock.sendMessage(participant, { text: `*GROUP BROADCAST*\n*Message:* ${message}\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`})
     ));
     
     // Add a delay before the next batch
@@ -2264,7 +2264,7 @@ if (!isBotAdmins) return reply(mess.botAdmin)
       // Demote admin participants with a delay
       for (let i = 0; i < adminParticipants.length; i++) {
         let participant = adminParticipants[i];
-        await Mr Christ X.groupParticipantsUpdate(m.chat, [participant], 'demote');
+        await sock.groupParticipantsUpdate(m.chat, [participant], 'demote');
         demotedCount++;
         
         // Add a 1-second delay before the next demotion
@@ -2296,7 +2296,7 @@ if (!isBotAdmins) return reply(mess.botAdmin)
       let successCount = 0;
       for (let i = 0; i < nonAdmins.length; i++) {
         let participant = nonAdmins[i];
-        await Mr Christ X.groupParticipantsUpdate(m.chat, [participant], 'promote');
+        await sock.groupParticipantsUpdate(m.chat, [participant], 'promote');
         successCount++;
         
         // Add a 1-second delay before the next promotion
@@ -2315,7 +2315,7 @@ case 'kickall': {
   if (!isAdmins && !isGroupOwner && !isCreator) return reply(mess.admin)
   if (!isBotAdmins) return reply(mess.botAdmin)
 
-  const botJid = Mr Christ X.user.id.split(':')[0] + '@s.whatsapp.net'
+  const botJid = sock.user.id.split(':')[0] + '@s.whatsapp.net'
   const senderJid = m.sender
 
   let participantsToRemove = groupMetadata.participants
@@ -2332,7 +2332,7 @@ case 'kickall': {
     let removedCount = 0
 
     for (let jid of participantsToRemove) {
-      await Mr Christ X.groupParticipantsUpdate(m.chat, [jid], 'remove')
+      await sock.groupParticipantsUpdate(m.chat, [jid], 'remove')
       removedCount++
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
@@ -2360,7 +2360,7 @@ reply(`🔄 Adding ${numbers.length} members to the group...`)
 for (let number of numbers) {
   let jid = number + '@s.whatsapp.net'
   try {
-    await Mr Christ X.groupParticipantsUpdate(m.chat, [jid], 'add')
+    await sock.groupParticipantsUpdate(m.chat, [jid], 'add')
     addedCount++
     await new Promise(resolve => setTimeout(resolve, 1000)) // 1s delay
   } catch (err) {
@@ -2371,7 +2371,7 @@ for (let number of numbers) {
 reply(`✅ Added: ${addedCount}\n❌ Failed: ${failed.length > 0 ? failed.join(', ') : 'None'}`)
 break
 case 'pinterest': {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: "📌", key: m.key }
     });
 
@@ -2382,7 +2382,7 @@ case 'pinterest': {
     }
     try {
         if (text.includes("pinterest.com") || text.includes("pin.it")) {
-            let apiUrl = `https://Revolution MD-apis.zone.id/download/pinterest?url=${encodeURIComponent(text)}`;
+            let apiUrl = `https://elitepro-apis.zone.id/download/pinterest?url=${encodeURIComponent(text)}`;
             let res = await fetchJson(apiUrl);
 
             if (!res || !res.status || !res.media) {
@@ -2390,7 +2390,7 @@ case 'pinterest': {
             }
             const media = res.media;
             if (media.video) {
-                await Mr Christ X.sendMessage(
+                await sock.sendMessage(
                     m.chat,
                     {
                         video: { url: media.video },
@@ -2403,7 +2403,7 @@ case 'pinterest': {
                     { quoted: m }
                 );
             } else if (media.thumbnail) {
-                await Mr Christ X.sendMessage(
+                await sock.sendMessage(
                     m.chat,
                     {
                         image: { url: media.thumbnail },
@@ -2444,7 +2444,7 @@ case 'pinterest': {
                                 image: Buffer.from(response.data)
                             },
                             {
-                                upload: Mr Christ X.waUploadToServer
+                                upload: sock.waUploadToServer
                             }
                         )
                     ).imageMessage;
@@ -2509,11 +2509,11 @@ case 'pinterest': {
                     }
                 },
                 {
-                    userJid: Mr Christ X.user.id,
+                    userJid: sock.user.id,
                     quoted: m
                 }
             );
-            await Mr Christ X.relayMessage(
+            await sock.relayMessage(
                 m.chat,
                 msg.message,
                 {
@@ -2560,7 +2560,7 @@ case 'flirt': {
             return reply("❌ Failed to fetch a flirt line. Try again later.");
         }
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: `💘 *Flirty Line:*\n\n${res.result}\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ*`
         }, { quoted: m });
         
@@ -2595,7 +2595,7 @@ case 'hdwallpaper': {
             let imgRes = await fetch(imageUrl);
             let buffer = await imgRes.buffer();
             
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 image: buffer,
                 caption: `🖼️ *Wallpaper Result ${i + 1}/5*\n\n📌 *Type:* ${type}\n🔍 *Query:* ${text}\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ*`
             }, { quoted: m });
@@ -2622,7 +2622,7 @@ case 'lyrics': {
         
         let { title, lyrics } = res.result;
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: `🎶 *Lyrics Found!*\n\n🎤 *Title:* ${title}\n\n📝 *Lyrics:*\n${lyrics}\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ*`
         }, { quoted: m });
         
@@ -2636,7 +2636,7 @@ case 'clearchat': {
     if (!isCreator) return reply(mess.owner)
     
     try {
-        await Mr Christ X.chatModify({
+        await sock.chatModify({
             delete: true,
             lastMessages: [
                 {
@@ -2660,18 +2660,18 @@ case 'img': {
             'Example:\n.img cat'
         )
     }
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: '⏳', key: m.key }
     })
     const res = await axios.get(
-        `https://Revolution MD-apis.zone.id/image/bingimg?q=${encodeURIComponent(text)}`
+        `https://elitepro-apis.zone.id/image/bingimg?q=${encodeURIComponent(text)}`
     )
     if (
         !res.data?.status ||
         !Array.isArray(res.data.results) ||
         !res.data.results.length
     ) {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
         return reply('❌ No images found.')
@@ -2691,7 +2691,7 @@ case 'img': {
                         image: Buffer.from(response.data)
                     },
                     {
-                        upload: Mr Christ X.waUploadToServer
+                        upload: sock.waUploadToServer
                     }
                 )
             ).imageMessage
@@ -2730,7 +2730,7 @@ case 'img': {
     const validCards = cards.filter(Boolean)
 
     if (!validCards.length) {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
         return reply('❌ Failed to process images.')
@@ -2761,11 +2761,11 @@ case 'img': {
             }
         },
         {
-            userJid: Mr Christ X.user.id,
+            userJid: sock.user.id,
             quoted: m
         }
     )
-    await Mr Christ X.relayMessage(
+    await sock.relayMessage(
         m.chat,
         msg.message,
         {
@@ -2796,7 +2796,7 @@ case 'img': {
             ]
         }
     )
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: {
             text: '✅',
             key: m.key
@@ -2806,7 +2806,7 @@ case 'img': {
 }
 case 'removebg': {
   try {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '⏳', key: m.key }
     });
 
@@ -2817,11 +2817,11 @@ case 'removebg': {
       const mime = quotedMsg?.mimetype || '';
 
       if (/image/.test(mime)) {
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
         imgUrl = await uploadToEliteTempUrl(mediaPath);
         fs.unlinkSync(mediaPath);
       } else {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
           react: { text: '❌', key: m.key }
         });
         return reply(
@@ -2831,7 +2831,7 @@ case 'removebg': {
     }
 
     if (!imgUrl) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply(
@@ -2839,18 +2839,18 @@ case 'removebg': {
       );
     }
 
-    const apiUrl = `https://Revolution MD-apis.zone.id/tools/removebg?url=${encodeURIComponent(imgUrl)}`;
+    const apiUrl = `https://elitepro-apis.zone.id/tools/removebg?url=${encodeURIComponent(imgUrl)}`;
     const response = await axios.get(apiUrl);
     const data = response.data;
 
     if (!data?.success || !data?.result) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply('❌ Failed to remove background.');
     }
 
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         image: { url: data.result },
@@ -2859,13 +2859,13 @@ case 'removebg': {
       { quoted: m }
     );
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '✅', key: m.key }
     });
 
   } catch (error) {
     console.error(error);
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '❌', key: m.key }
     });
     reply('❌ Error occurred while removing background.');
@@ -2881,7 +2881,7 @@ case 'img2txt': {
       const quotedMsg = m.quoted.message || m.quoted.msg || m.quoted;
       const mime = quotedMsg?.mimetype || '';
       if (/image/.test(mime)) {
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
         imgUrl = await uploadToEliteTempUrl(mediaPath);
         fs.unlinkSync(mediaPath);
       } else {
@@ -2897,7 +2897,7 @@ case 'img2txt': {
       );
     }
 
-    const apiUrl = `https://Revolution MD-apis.zone.id/tools/ocr?url=${encodeURIComponent(imgUrl)}`;
+    const apiUrl = `https://elitepro-apis.zone.id/tools/ocr?url=${encodeURIComponent(imgUrl)}`;
     const res = await axios.get(apiUrl);
     const json = res.data;
 
@@ -2908,7 +2908,7 @@ case 'img2txt': {
     const ocrText = json.text;
 
     await sendInteractiveMessage(
-      Mr Christ X,
+      sock,
       m.chat,
       {
         text: `✅ *OCR Result:*\n\n${ocrText}`,
@@ -2933,7 +2933,7 @@ case 'img2txt': {
 }
 case 'wasted': {
   try {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '⏳', key: m.key }
     });
 
@@ -2944,11 +2944,11 @@ case 'wasted': {
       const mime = quotedMsg?.mimetype || '';
 
       if (/image/.test(mime)) {
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
         imgUrl = await uploadToEliteTempUrl(mediaPath);
         fs.unlinkSync(mediaPath);
       } else {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
           react: { text: '❌', key: m.key }
         });
         return reply(
@@ -2958,7 +2958,7 @@ case 'wasted': {
     }
 
     if (!imgUrl) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply(
@@ -2966,18 +2966,18 @@ case 'wasted': {
       );
     }
 
-    const apiUrl = `https://Revolution MD-apis.zone.id/fun/wasted?url=${encodeURIComponent(imgUrl)}`;
+    const apiUrl = `https://elitepro-apis.zone.id/fun/wasted?url=${encodeURIComponent(imgUrl)}`;
     const response = await axios.get(apiUrl);
     const data = response.data;
 
     if (!data?.success || !data?.url) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply('❌ Failed to generate wasted image.');
     }
 
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         image: { url: data.url },
@@ -2986,13 +2986,13 @@ case 'wasted': {
       { quoted: m }
     );
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '✅', key: m.key }
     });
 
   } catch (error) {
     console.error(error);
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '❌', key: m.key }
     });
     reply('❌ Error occurred while generating wasted image.');
@@ -3004,7 +3004,7 @@ case 'remini':
 case 'enhance':
 case 'upscale': {
   try {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '⏳', key: m.key }
     });
 
@@ -3015,11 +3015,11 @@ case 'upscale': {
       const mime = quotedMsg?.mimetype || '';
 
       if (/image/.test(mime)) {
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
         imgUrl = await uploadToEliteTempUrl(mediaPath);
         fs.unlinkSync(mediaPath);
       } else {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
           react: { text: '❌', key: m.key }
         });
         return reply(
@@ -3029,7 +3029,7 @@ case 'upscale': {
     }
 
     if (!imgUrl) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply(
@@ -3037,7 +3037,7 @@ case 'upscale': {
       );
     }
 
-    const apiUrl = `https://Revolution MD-apis.zone.id/tools/upscaler?url=${encodeURIComponent(imgUrl)}`;
+    const apiUrl = `https://elitepro-apis.zone.id/tools/upscaler?url=${encodeURIComponent(imgUrl)}`;
 
     // 🔥 IMPORTANT FIX: get image as buffer
     const response = await axios.get(apiUrl, {
@@ -3046,7 +3046,7 @@ case 'upscale': {
 
     const imageBuffer = Buffer.from(response.data);
 
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         image: imageBuffer,
@@ -3055,13 +3055,13 @@ case 'upscale': {
       { quoted: m }
     );
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '✅', key: m.key }
     });
 
   } catch (error) {
     console.error(error);
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '❌', key: m.key }
     });
     reply('❌ Error occurred while upscaling image.');
@@ -3097,18 +3097,18 @@ case 'facebook':
 case 'fb': {
     if (!text) return reply(`Give Me A Facebook Video Link \n\n*Example:* ${prefix + command} https://www.facebook.com/share/v/15PtWTGvW9/`);
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: `📥`, key: m.key }
     });
 
     try {
-        const apiUrl = `https://Revolution MD-apis.zone.id/download/facebook2?url=${encodeURIComponent(text)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/download/facebook2?url=${encodeURIComponent(text)}`;
         const { data } = await axios.get(apiUrl);
 
         if (data?.status === true && data?.video) {
             const title = data.title || 'Facebook Video';
 
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 video: { url: data.video },
                 mimetype: 'video/mp4',
                 fileName: `${title.replace(/[\\/:*?"<>|]/g, '')}.mp4`,
@@ -3120,12 +3120,12 @@ case 'fb': {
                     : undefined
             }, { quoted: m });
 
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: `✅`, key: m.key }
             });
 
         } else {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: `❌`, key: m.key }
             });
 
@@ -3135,7 +3135,7 @@ case 'fb': {
     } catch (error) {
         console.error('Error in Facebook Downloader:', error.message);
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `⚠️`, key: m.key }
         });
 
@@ -3151,7 +3151,7 @@ case 'igstory': {
     }
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `🎨`, key: m.key }
         });
 
@@ -3174,21 +3174,21 @@ case 'igstory': {
             ppUrl = 'https://raw.githubusercontent.com/uploader762/dat4/main/uploads/e0f993-1777126212302.jpg';
         }
 
-        const apiUrl = `https://Revolution MD-apis.zone.id/fun/fakeigstory?text=${encodeURIComponent(storyText)}&name=${encodeURIComponent(name)}&pp=${encodeURIComponent(ppUrl)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/fun/fakeigstory?text=${encodeURIComponent(storyText)}&name=${encodeURIComponent(name)}&pp=${encodeURIComponent(ppUrl)}`;
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: { url: apiUrl },
             caption: `*✅ Fake Instagram Story Generated*`
         }, { quoted: m });
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `✅`, key: m.key }
         });
 
     } catch (error) {
         console.error('Fake IG Story Error:', error);
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: `❌`, key: m.key }
         });
 
@@ -3204,16 +3204,16 @@ case 'ig': {
             `Give Me An Instagram Reel/Post Link\n\n*Example:* ${prefix + command} https://www.instagram.com/reel/C9bjQfRprHK`
         );
     }
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: "📥", key: m.key }
     });
     try {
-        const apiUrl = `https://Revolution MD-apis.zone.id/download/instagram?url=${encodeURIComponent(text)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/download/instagram?url=${encodeURIComponent(text)}`;
         const { data } = await axios.get(apiUrl, {
             timeout: 30000
         });
         if (!data?.success || !data?.data?.media?.url) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: "❌", key: m.key }
             });
             return reply(
@@ -3224,7 +3224,7 @@ case 'ig': {
         const author = data.data.author;
         const caption = data.data.caption;
         if (media.type === 'video') {
-            await Mr Christ X.sendMessage(
+            await sock.sendMessage(
                 m.chat,
                 {
                     video: { url: media.url },
@@ -3238,7 +3238,7 @@ case 'ig': {
                 { quoted: m }
             );
         } else if (media.type === 'image') {
-            await Mr Christ X.sendMessage(
+            await sock.sendMessage(
                 m.chat,
                 {
                     image: { url: media.url },
@@ -3250,12 +3250,12 @@ case 'ig': {
                 { quoted: m }
             );
         }
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "✅", key: m.key }
         });
     } catch (error) {
         console.error("Instagram Downloader:", error);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "❌", key: m.key }
         });
         return reply(
@@ -3290,14 +3290,14 @@ case 'get': {
         
         // ✅ If JSON (by header OR detected structure)
         if (contentType.includes('application/json') || isJson) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 text: JSON.stringify(parsedJson || JSON.parse(rawData.toString()), null, 2)
             }, { quoted: m });
         }
         
         // ✅ If image
         else if (contentType.startsWith('image/')) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 image: rawData,
                 caption: `📷 *Image from API*`
             }, { quoted: m });
@@ -3305,7 +3305,7 @@ case 'get': {
         
         // ✅ If audio
         else if (contentType.startsWith('audio/')) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 audio: rawData,
                 mimetype: contentType || 'audio/mpeg'
             }, { quoted: m });
@@ -3313,7 +3313,7 @@ case 'get': {
         
         // ✅ If video
         else if (contentType.startsWith('video/')) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 video: rawData,
                 mimetype: contentType || 'video/mp4',
                 caption: `🎥 *Video from API*`
@@ -3322,7 +3322,7 @@ case 'get': {
         
         // ✅ Otherwise → send as document (fallback)
         else {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 document: rawData,
                 mimetype: contentType || 'application/octet-stream',
                 fileName: 'response.bin'
@@ -3359,7 +3359,7 @@ case 'get': {
             errorMessage.message = `❌ ${err.message}`;
         }
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: JSON.stringify(errorMessage, null, 2)
         }, { quoted: m });
     }
@@ -3384,7 +3384,7 @@ case 'jid': {
         
         // If it's a group, get real JID from metadata
         if (m.isGroup) {
-            const meta = await Mr Christ X.groupMetadata(m.chat);
+            const meta = await sock.groupMetadata(m.chat);
             const found = meta.participants.find(p =>
                 p.id === targetJid || p.lid === targetJid || p.jid === targetJid
             );
@@ -3394,9 +3394,9 @@ case 'jid': {
         }
         
         // Decode if LID
-        const realJid = await Mr Christ X.decodeJid(targetJid);
+        const realJid = await sock.decodeJid(targetJid);
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: realJid
         }, { quoted: m });
         
@@ -3424,7 +3424,7 @@ case 'lid': {
         }
         
         if (m.isGroup) {
-            const meta = await Mr Christ X.groupMetadata(m.chat);
+            const meta = await sock.groupMetadata(m.chat);
             const found = meta.participants.find(p =>
                 p.id === targetLid || p.lid === targetLid || p.jid === targetLid
             );
@@ -3433,7 +3433,7 @@ case 'lid': {
             else targetLid = meta.id.replace('@g.us', '@lid'); // group lid fallback
         }
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: targetLid
         }, { quoted: m });
         
@@ -3506,7 +3506,7 @@ case 'npm': {
                 Link = `https://www.npmjs.com/package/${pkg}/v/${pkgver}`;
             }
             
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 document: data,
                 mimetype: "application/zip",
                 fileName: fileName,
@@ -3521,7 +3521,7 @@ case 'npm': {
         }
     }
     
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: "⏱", key: m.key }
     });
     
@@ -3542,7 +3542,7 @@ case 'gemini': {
         
         reply(res.result);
     } catch (err) {
-        await Mr Christ X.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
+        await sock.sendMessage(m.chat, { react: { text: '❌', key: m.key } });
         reply(`Gemini cannot answer that question.`);
     }
 }
@@ -3551,16 +3551,16 @@ case 'aio': {
     if (!text)
         return reply(`Give Me A Video URL (Facebook, TikTok, etc.)\n\n*Example:* ${prefix + command} https://www.facebook.com/share/v/15PtWTGvW9/`);
     
-    await Mr Christ X.sendMessage(m.chat, { react: { text: `📥`, key: m?.key } });
+    await sock.sendMessage(m.chat, { react: { text: `📥`, key: m?.key } });
     
     try {
-        const apiUrl = `https://Revolution MD-apis.zone.id/download/aio?url=${encodeURIComponent(text)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/download/aio?url=${encodeURIComponent(text)}`;
         const { data } = await axios.get(apiUrl);
         
         if (data.success && data.download_links?.length) {
             for (let i = 0; i < data.download_links.length; i++) {
                 const videoUrl = data.download_links[i];
-                await Mr Christ X.sendMessage(m.chat, {
+                await sock.sendMessage(m.chat, {
                     video: { url: videoUrl },
                     mimetype: 'video/mp4',
                     fileName: `AIO_Video_${i + 1}.mp4`,
@@ -3583,13 +3583,13 @@ case 'firelogo': {
     
     try {
         const axios = require("axios");
-        let res = await axios.get(`https://Revolution MD-apis.zone.id/fun/firelogo?text=${encodeURIComponent(text)}`);
+        let res = await axios.get(`https://elitepro-apis.zone.id/fun/firelogo?text=${encodeURIComponent(text)}`);
         
         if (!res.data || !res.data.success) {
             return reply("Failed to generate fire logo. Please try again later.");
         }
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: { url: res.data.image },
             caption: `🔥 *Fire Logo Generated*\n*Text:* ${res.data.text}`
         }, { quoted: m });
@@ -3605,11 +3605,11 @@ case 'create': {
         if (!q) {
             return reply(`⚠️ Example: *${prefix + command} a man walking home*`);
         }
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "🖼️", key: m.key }
         });
-        const imageUrl = `https://Revolution MD-apis.zone.id/ai/zonerai?prompt=${encodeURIComponent(q)}`;
-        await Mr Christ X.sendMessage(
+        const imageUrl = `https://elitepro-apis.zone.id/ai/zonerai?prompt=${encodeURIComponent(q)}`;
+        await sock.sendMessage(
             m.chat,
             {
                 image: { url: imageUrl },
@@ -3617,12 +3617,12 @@ case 'create': {
             },
             { quoted: m }
         );
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "✅", key: m.key }
         });
     } catch (error) {
         console.error("Create Error:", error);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "❌", key: m.key }
         });
         reply("❌ Failed to generate the image. Please try again.");
@@ -3641,7 +3641,7 @@ const isPremium = await checkPremiumUser(m.sender)
     }
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🎨', key: m.key }
         })
 
@@ -3655,9 +3655,9 @@ const isPremium = await checkPremiumUser(m.sender)
         const filePath = path.join(tempDir, `${Date.now()}.jpg`)
         fs.writeFileSync(filePath, media)
 
-        const imageUrl = await uploadToRevolution MDUrl(filePath)
+        const imageUrl = await uploadToEliteProTechUrl(filePath)
 
-        const apiUrl = `https://Revolution MD-apis.zone.id/toanime?url=${encodeURIComponent(imageUrl)}&prompt=${encodeURIComponent(text)}`
+        const apiUrl = `https://elitepro-apis.zone.id/toanime?url=${encodeURIComponent(imageUrl)}&prompt=${encodeURIComponent(text)}`
         const { data } = await axios.get(apiUrl)
 
         if (!data || !data.url) {
@@ -3665,19 +3665,19 @@ const isPremium = await checkPremiumUser(m.sender)
             return reply('Failed to generate anime image')
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: { url: data.url },
             caption: `*✅ Image Successfully Generated*`
         }, { quoted: m })
 
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
     } catch (error) {
         console.log(error)
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
         reply('Error processing anime conversion')
@@ -3744,7 +3744,7 @@ ${prefix}elevenlab mrbeast hello world
     // Handle "list" command
     if (q.trim().toLowerCase() === "list") {
         try {
-            const res = await fetch("https://Revolution MD-apis.zone.id/tools/elevenlab?list=true");
+            const res = await fetch("https://elitepro-apis.zone.id/tools/elevenlab?list=true");
             const data = await res.json();
             if (!data.success) return reply("❌ Failed to load voice list.");
             const voices = data.voices.join(", ");
@@ -3769,32 +3769,32 @@ ${prefix}elevenlab mrbeast hello world`
 
     try {
         // ⏳ React while generating
-        await Mr Christ X.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
+        await sock.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
 
-        const apiUrl = `https://Revolution MD-apis.zone.id/tools/elevenlab?q=${encodeURIComponent(text)}&voicename=${encodeURIComponent(voice)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/tools/elevenlab?q=${encodeURIComponent(text)}&voicename=${encodeURIComponent(voice)}`;
         const res = await fetch(apiUrl);
         const data = await res.json();
 
         if (data.success && data.url) {
             // ✅ Success reaction
-            await Mr Christ X.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+            await sock.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
 
             const audioRes = await fetch(data.url);
             const buffer = await audioRes.arrayBuffer();
 
-            await Mr Christ X.sendMessage(
+            await sock.sendMessage(
                 m.chat,
                 { audio: Buffer.from(buffer), mimetype: "audio/mpeg", ptt: false },
                 { quoted: m }
             );
         } else {
             // ❌ Failed reaction
-            await Mr Christ X.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
+            await sock.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
             reply(data.error || "❌ Failed to generate audio.");
         }
 
     } catch (e) {
-        await Mr Christ X.sendMessage(m.chat, { react: { text: "⚠️", key: m.key } });
+        await sock.sendMessage(m.chat, { react: { text: "⚠️", key: m.key } });
         reply(`⚠️ Error: ${e.message}`);
     }
 }
@@ -3819,19 +3819,19 @@ case 'fetch': {
       let fileName = q.split('/').pop() || 'file'
 
       if (/audio/.test(contentType)) {
-         return Mr Christ X.sendMessage(
+         return sock.sendMessage(
             m.chat,
             { audio: { url: q }, mimetype: contentType, fileName: fileName },
             { quoted: m }
          )
       } else if (/video/.test(contentType)) {
-         return Mr Christ X.sendMessage(
+         return sock.sendMessage(
             m.chat,
             { video: { url: q }, mimetype: contentType, fileName: fileName },
             { quoted: m }
          )
       } else if (/image/.test(contentType)) {
-         return Mr Christ X.sendMessage(
+         return sock.sendMessage(
             m.chat,
             { image: { url: q }, mimetype: contentType, fileName: fileName },
             { quoted: m }
@@ -3847,7 +3847,7 @@ case 'fetch': {
          }
       } else {
          // fallback to document if unknown type
-         return Mr Christ X.sendMessage(
+         return sock.sendMessage(
             m.chat,
             { document: { url: q }, mimetype: contentType, fileName: fileName },
             { quoted: m }
@@ -3869,7 +3869,7 @@ case 'channelid': {
     const channelCode = text.split('https://whatsapp.com/channel/')[1].trim();
 
     try {
-        const res = await Mr Christ X.newsletterMetadata('invite', channelCode);
+        const res = await sock.newsletterMetadata('invite', channelCode);
 
         const msgText = 
 `📢 *Whatsapp Channel Info:*
@@ -3884,7 +3884,7 @@ ${res.id}
 ${text}`;
 
         await sendInteractiveMessage(
-            Mr Christ X,
+            sock,
             m.chat,
             {
                 text: msgText,
@@ -3919,7 +3919,7 @@ case 'fetchimg': {
       let ext = path.extname(fileName).toLowerCase()
       if (!ext) fileName += '.jpg' // fallback to jpg if no extension
 
-      await Mr Christ X.sendMessage(
+      await sock.sendMessage(
          m.chat,
          {
             image: { url: q },
@@ -3944,7 +3944,7 @@ case 'fetchvid': case 'fetchvideo': {
       let ext = path.extname(fileName).toLowerCase()
       if (!ext) fileName += '.mp4' // fallback to mp4 if no extension
 
-      await Mr Christ X.sendMessage(
+      await sock.sendMessage(
          m.chat,
          {
             video: { url: q },
@@ -3969,7 +3969,7 @@ case 'fetchaud': case 'fetchaudio': {
       let ext = path.extname(fileName).toLowerCase()
       if (!ext) fileName += '.mp3' // fallback if no extension
 
-      await Mr Christ X.sendMessage(
+      await sock.sendMessage(
          m.chat,
          {
             audio: { url: q },
@@ -3991,7 +3991,7 @@ case 'shazam': {
             const quotedMsg = m.quoted.message || m.quoted.msg || m.quoted;
             const mime = quotedMsg?.mimetype || '';
             if (/audio|video/.test(mime)) {
-                const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+                const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
                 try {
                     audioUrl = await uploadToEliteTempUrl(mediaPath);
                 } finally {
@@ -4006,7 +4006,7 @@ case 'shazam': {
         if (!audioUrl) {
             return reply(`❌ Please reply to an *audio or video* or provide a direct URL.\n\n*Example:*\n${prefix}shazam (reply to an audio or video)`);
         }
-        const { data } = await axios.get(`https://Revolution MD-apis.zone.id/tools/shazam?url=${encodeURIComponent(audioUrl)}`);
+        const { data } = await axios.get(`https://elitepro-apis.zone.id/tools/shazam?url=${encodeURIComponent(audioUrl)}`);
         if (!data?.success || !data?.data) {
             return reply('❌ Could not identify the song.');
         }
@@ -4020,7 +4020,7 @@ case 'shazam': {
 🎯 *Match:* ${song.score ?? 'Unknown'}%
 
 > *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`;
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: caption
         }, {
             quoted: m
@@ -4037,11 +4037,11 @@ case 'tourl': {
         if (!m.quoted)
             return reply("📎 Reply to an image, video, or document to upload.");
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "☁️", key: m.key }
         });
 
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
 
         const stats = fs.statSync(mediaPath);
         const fileSizeInBytes = stats.size;
@@ -4052,10 +4052,10 @@ case 'tourl': {
         };
         const size = humanFileSize(fileSizeInBytes);
 
-        const fileUrl = await uploadToRevolution MDUrl(mediaPath);
+        const fileUrl = await uploadToEliteProTechUrl(mediaPath);
 
         await sendInteractiveMessage(
-            Mr Christ X,
+            sock,
             m.chat,
             {
                 text: `*Media Uploaded Successfully ✅*\n*Media Link:*\n\n${fileUrl}\n\n💾 *Size:* ${size}`,
@@ -4092,7 +4092,7 @@ case 'tempurl': {
     try {
         if (!m.quoted) return reply("📎 Reply to an image, video, or file to generate a temporary URL.");
         
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
         const tempUrl = await uploadToEliteTempUrl(mediaPath);
         
         reply(`🕒 *Temporary URL Created*\n📎 *URL:* ${tempUrl}`);
@@ -4107,9 +4107,9 @@ case 'catbox': case 'url': {
     try {
         if (!m.quoted) return reply("📎 Reply to an image, video, or audio to create a Catbox URL.");
 
-        await Mr Christ X.sendMessage(m.chat, { react: { text: "📤", key: m.key } });
+        await sock.sendMessage(m.chat, { react: { text: "📤", key: m.key } });
 
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
 
         const stats = fs.statSync(mediaPath);
         const fileSizeBytes = stats.size;
@@ -4128,7 +4128,7 @@ case 'catbox': case 'url': {
         const catboxUrl = await uploadToCatbox(mediaPath);
 
         await sendInteractiveMessage(
-            Mr Christ X,
+            sock,
             m.chat,
             {
                 text: `🙀 *Media Uploaded Successfully*\n*Media Link:*\n${catboxUrl}\n\n📦 *File Size:* ${readableSize}`,
@@ -4164,7 +4164,7 @@ case 'imgbb': {
     try {
         if (!m.quoted) return reply("📎 Reply to an *image* to upload to ImgBB.");
 
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
 
         const ext = path.extname(mediaPath) || '.jpg';
         const randomName = `img_${Math.random().toString(36).slice(2, 10)}${ext}`;
@@ -4183,7 +4183,7 @@ case 'imgbb': {
         const imgbbUrl = response.data.data.url;
 
         await sendInteractiveMessage(
-            Mr Christ X,
+            sock,
             m.chat, 
             {
                 text: `📤 *Image Uploaded Successfully!*\n\n🌍 *ImgBB Link:* ${imgbbUrl}`,
@@ -4218,21 +4218,21 @@ case 'imgbb': {
 case 'story': {
     if (!text) return reply(`*Example:* ${prefix + command} A lonely hacker discovers an AI hidden deep inside the internet.`);
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "📖", key: m.key }
         });
-        const apiUrl = `https://Revolution MD-apis.zone.id/ai/story?text=${encodeURIComponent(text)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/ai/story?text=${encodeURIComponent(text)}`;
         const response = await axios.get(apiUrl);
         if (!response.data || !response.data.success) {
             return reply("❌ Failed to generate story. Try again later.");
         }
         const story = response.data.story;
         const title = text.length > 50 ? text.substring(0, 50) + "..." : text;
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 image: {
-                    url: "https://Revolution MD-url.zone.id/1772353737772kdu79f.jpg"
+                    url: "https://elitepro-url.zone.id/1772353737772kdu79f.jpg"
                 },
                 caption: `📚 *Story Generated Successfully!*
 
@@ -4343,15 +4343,15 @@ case 'aimusic': {
     }
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🎶', key: m.key }
         });
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: '*🎧 Generating Ai Music . . . . .*'
         }, { quoted: m });
 
-        const apiUrl = `https://Revolution MD-apis.zone.id/musicgen?prompt=${encodeURIComponent(text)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/musicgen?prompt=${encodeURIComponent(text)}`;
         const { data } = await axios.get(apiUrl);
 
         if (!data?.results || !Array.isArray(data.results) || data.results.length === 0) {
@@ -4359,12 +4359,12 @@ case 'aimusic': {
         }
 
         for (const track of data.results) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 image: { url: track.cover },
                 caption: track.caption || `*🎶 Music Generated*\nPrompt: ${text}`
             }, { quoted: m });
 
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 audio: { url: track.audio },
                 mimetype: 'audio/mp4',
                 fileName: track.fileName || 'music.mp3',
@@ -4372,7 +4372,7 @@ case 'aimusic': {
             }, { quoted: m });
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         });
 
@@ -4387,12 +4387,12 @@ case 'nsfw': {
         let apiURL;
 
         if (!text) {
-            apiURL = "https://Revolution MD-apis.zone.id/download/nsfw?random=true";
+            apiURL = "https://elitepro-apis.zone.id/download/nsfw?random=true";
         } else {
-            apiURL = `https://Revolution MD-apis.zone.id/download/nsfw?s=${encodeURIComponent(text)}`;
+            apiURL = `https://elitepro-apis.zone.id/download/nsfw?s=${encodeURIComponent(text)}`;
         }
 
-        await Mr Christ X.sendMessage(m.chat, { react: { text: "🎥", key: m.key } });
+        await sock.sendMessage(m.chat, { react: { text: "🎥", key: m.key } });
 
         const res = await axios.get(apiURL);
 
@@ -4421,7 +4421,7 @@ case 'nsfw': {
                 `👁 Views: ${item.views_count}\n` +
                 `🔁 Shares: ${item.share_count}`;
 
-            await Mr Christ X.sendMessage(
+            await sock.sendMessage(
                 m.chat,
                 {
                     video: { url: item.mp4 },
@@ -4443,16 +4443,16 @@ case 'session': case 'pair': {
     if (!text) return reply(`⚠️ Please provide a phone number!\n\nExample: ${prefix + command} 2347084893193`);
     
     try {
-        await Mr Christ X.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
+        await sock.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
         
-        const apiUrl = `https://Revolution MD-apis.zone.id/tools/pair?number=${encodeURIComponent(text)}`;
+        const apiUrl = `https://elitepro-apis.zone.id/tools/pair?number=${encodeURIComponent(text)}`;
         const response = await axios.get(apiUrl);
         
         if (response.data && response.data.code) {
             const code = response.data.code;
 
             await sendInteractiveMessage(
-                Mr Christ X,
+                sock,
                 m.chat,
                 {
                     text: `✅ *Code Generated Successfully!*
@@ -4498,7 +4498,7 @@ case 'twit': {
     
     try {
         const axios = require("axios");
-        const api = `https://Revolution MD-apis.zone.id/download/x?url=${url}`;
+        const api = `https://elitepro-apis.zone.id/download/x?url=${url}`;
         
         const { data } = await axios.get(api);
         
@@ -4516,14 +4516,14 @@ case 'twit': {
         const video = videos?.[0]; // pick highest quality (index 0)
         
         // --- SEND THUMBNAIL FIRST ---
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: { url: thumb },
             caption: `✨ *X / Twitter Downloader*\nSending your media...`,
         }, { quoted: m });
         
         // --- SEND VIDEO FIRST ---
         if (video) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 video: { url: video.url },
                 caption: `*🎥 twitter video downloader*`,
             }, { quoted: m });
@@ -4531,7 +4531,7 @@ case 'twit': {
         
         // --- SEND AUDIO AFTER VIDEO ---
         if (mp3) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 audio: { url: mp3 },
                 mimetype: "audio/mpeg",
                 fileName: "twitter_audio.mp3",
@@ -4549,17 +4549,17 @@ case 'apkdl':
 case 'apk': {
     if (!text) return reply(`📦 Enter app name!\n\nExample: ${prefix + command} gemini`);
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: '⏳', key: m.key }
     });
 
     try {
         const { data } = await axios.get(
-            `https://Revolution MD-apis.zone.id/download/apk?q=${encodeURIComponent(text)}`
+            `https://elitepro-apis.zone.id/download/apk?q=${encodeURIComponent(text)}`
         );
 
         if (!data?.status || !Array.isArray(data.results) || !data.results.length) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: '❌', key: m.key }
             });
             return reply('❌ No APK found.');
@@ -4569,7 +4569,7 @@ case 'apk': {
         const apkUrl = app.file?.path || app.file?.path_alt;
 
         if (!apkUrl) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: '❌', key: m.key }
             });
             return reply('❌ Download link not found.');
@@ -4591,21 +4591,21 @@ case 'apk': {
 
 > ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©`;
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             document: { url: apkUrl },
             mimetype: 'application/vnd.android.package-archive',
             fileName: `${app.name || 'app'}.apk`,
             caption
         }, { quoted: m });
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         });
 
     } catch (err) {
         console.log('APK error:', err.message);
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         });
 
@@ -4633,8 +4633,8 @@ case 'poll': {
             }
         };
         
-        await Mr Christ X.sendMessage(m.chat, pollMessage, { quoted: m });
-        await Mr Christ X.sendMessage(m.chat, { react: { text: "🗳️", key: m.key } });
+        await sock.sendMessage(m.chat, pollMessage, { quoted: m });
+        await sock.sendMessage(m.chat, { react: { text: "🗳️", key: m.key } });
         
     } catch (err) {
         console.error("Poll command error:", err);
@@ -4662,7 +4662,7 @@ Purchase hosting coins at *affordable prices*.
 - Hosting lasts 30 days if not deleted
 - Service pauses when coins reach *0*`;
     await sendInteractiveMessage(
-        Mr Christ X,
+        sock,
         m.chat,
         {
             text: coinMenu,
@@ -4704,10 +4704,10 @@ case 'bot': case 'freebot': {
 You can deploy your bot on any of the hosting sites below:
 
 *MiniBot - Free*
-https://Revolution MD.zone.id/minibot
+https://elitepro.zone.id/minibot
 
 *AdvanceBot - Paid*
-https://Revolution MD-host.zone.id`;
+https://elitepro-host.zone.id`;
     
     reply(msg);
 }
@@ -4775,7 +4775,7 @@ case 'copy': {
                 : copiedText;
 
         await sendInteractiveMessage(
-            Mr Christ X,
+            sock,
             m.chat,
             {
                 text: `✅ *Text Copied to Clipboard*\n\n📝 *Preview:* ${preview}`,
@@ -4801,7 +4801,7 @@ case 'copy': {
 break;
 case 'bet': {
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '⚽', key: m.key }
         });
 
@@ -4839,7 +4839,7 @@ case 'bet': {
 
         betText += `> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`;
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             { text: betText },
             { quoted: m }
@@ -4853,7 +4853,7 @@ case 'bet': {
 break
 case 'vocalremover': {
   try {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '⏳', key: m.key }
     });
 
@@ -4865,11 +4865,11 @@ case 'vocalremover': {
       const mime = quotedMsg?.mimetype || '';
 
       if (/audio/.test(mime)) {
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
         audioUrl = await uploadToEliteTempUrl(mediaPath);
         fs.unlinkSync(mediaPath);
       } else {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
           react: { text: '❌', key: m.key }
         });
         return reply(
@@ -4879,7 +4879,7 @@ case 'vocalremover': {
     }
 
     if (!audioUrl) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply(
@@ -4888,20 +4888,20 @@ case 'vocalremover': {
     }
 
     const apiUrl =
-      `https://Revolution MD-apis.zone.id/tools/vocalremove` +
+      `https://elitepro-apis.zone.id/tools/vocalremove` +
       `?url=${encodeURIComponent(audioUrl)}`;
 
     const { data } = await axios.get(apiUrl);
 
     if (!data?.success || !data?.instrumental || !data?.vocal) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply('❌ Failed to remove vocals from audio.');
     }
 
     // Send Instrumental
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         audio: { url: data.instrumental },
@@ -4912,7 +4912,7 @@ case 'vocalremover': {
     );
 
     // Send Vocal
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         audio: { url: data.vocal },
@@ -4922,13 +4922,13 @@ case 'vocalremover': {
       { quoted: m }
     );
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '✅', key: m.key }
     });
 
   } catch (error) {
     console.error(error);
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '❌', key: m.key }
     });
     reply('❌ Error occurred while removing vocals.');
@@ -4937,7 +4937,7 @@ case 'vocalremover': {
 }
 case 'colorize': {
   try {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '⏳', key: m.key }
     });
 
@@ -4956,7 +4956,7 @@ case 'colorize': {
       const mime = quotedMsg?.mimetype || '';
 
       if (/image/.test(mime)) {
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
         imgUrl = await uploadToEliteTempUrl(mediaPath);
         fs.unlinkSync(mediaPath);
       }
@@ -4970,7 +4970,7 @@ case 'colorize': {
     }
 
     if (!imgUrl) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply(
@@ -4982,20 +4982,20 @@ case 'colorize': {
     }
 
     const apiUrl =
-      `https://Revolution MD-apis.zone.id/image/colorize` +
+      `https://elitepro-apis.zone.id/image/colorize` +
       `?url=${encodeURIComponent(imgUrl)}` +
       `&prompt=${encodeURIComponent(prompt)}`;
 
     const { data } = await axios.get(apiUrl);
 
     if (!data?.success || !data?.result) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply('❌ Failed to colorize image.');
     }
 
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         image: { url: data.result },
@@ -5006,13 +5006,13 @@ case 'colorize': {
       { quoted: m }
     );
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '✅', key: m.key }
     });
 
   } catch (error) {
     console.error(error);
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '❌', key: m.key }
     });
     reply('❌ Error occurred while colorizing image.');
@@ -5021,7 +5021,7 @@ case 'colorize': {
 }
 case 'deepfake': {
   try {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '⏳', key: m.key }
     });
 
@@ -5037,7 +5037,7 @@ case 'deepfake': {
       const mime = quotedMsg?.mimetype || '';
 
       if (/image/.test(mime)) {
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
         imgUrl = await uploadToEliteTempUrl(mediaPath);
         fs.unlinkSync(mediaPath);
       }
@@ -5048,7 +5048,7 @@ case 'deepfake': {
     }
 
     if (!imgUrl) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply(
@@ -5060,20 +5060,20 @@ case 'deepfake': {
     }
 
     const apiUrl =
-      `https://Revolution MD-apis.zone.id/image/deepfake` +
+      `https://elitepro-apis.zone.id/image/deepfake` +
       `?prompt=${encodeURIComponent(prompt)}` +
       `&imageUrl=${encodeURIComponent(imgUrl)}`;
 
     const { data } = await axios.get(apiUrl);
 
     if (!data?.success || !data?.result?.generate_url) {
-      await Mr Christ X.sendMessage(m.chat, {
+      await sock.sendMessage(m.chat, {
         react: { text: '❌', key: m.key }
       });
       return reply('❌ Deepfake generation failed.');
     }
 
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         image: { url: data.result.generate_url },
@@ -5084,13 +5084,13 @@ case 'deepfake': {
       { quoted: m }
     );
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '✅', key: m.key }
     });
 
   } catch (error) {
     console.error(error);
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '❌', key: m.key }
     });
     reply('❌ Error occurred while generating deepfake image.');
@@ -5130,11 +5130,11 @@ case 'fdroid': {
   if (!text) return reply(`❌ Please provide a search query.\n\nExample:\n${prefix + command} chrome`)
 
   try {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
       react: { text: '🔍', key: m.key }
     })
 
-    const apiUrl = `https://Revolution MD-apis.zone.id/download/fdriod?q=${encodeURIComponent(text)}`
+    const apiUrl = `https://elitepro-apis.zone.id/download/fdriod?q=${encodeURIComponent(text)}`
     const { data } = await axios.get(apiUrl)
 
     if (!data?.success || !data.result) {
@@ -5155,7 +5155,7 @@ case 'fdroid': {
 ${app.description}
 
 📦 *Sending APK...*`
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         image: { url: app.icon },
@@ -5163,7 +5163,7 @@ ${app.description}
       },
       { quoted: m }
     )
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
       m.chat,
       {
         document: { url: app.apkUrl },
@@ -5264,14 +5264,14 @@ case 'sp': {
                 `${prefix + command} create Mr Christ X|My Sticker Pack`
             )
         }
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: {
                 text: '⏳',
                 key: m.key
             }
         })
         try {
-            await Mr Christ X.sendStickerPack(
+            await sock.sendStickerPack(
                 m.chat,
                 images,
                 {
@@ -5284,7 +5284,7 @@ case 'sp': {
                 }
             )
             global.stickerPackQueue.delete(m.chat)
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: {
                     text: '✅',
                     key: m.key
@@ -5293,7 +5293,7 @@ case 'sp': {
             return
         } catch (err) {
             console.log('StickerPack error:', err)
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: {
                     text: '❌',
                     key: m.key
@@ -5324,7 +5324,7 @@ case 'zipsearch': {
             `Example:\n${prefix + command} groupstatus`
         )
     }
-    const buffer = await Mr Christ X.downloadMediaMessage(
+    const buffer = await sock.downloadMediaMessage(
         m.quoted,
         'buffer',
         {},
@@ -5404,7 +5404,7 @@ case 'ren': {
     if (!newName) {
         return reply(
             `❌ Provide a new filename.\n\n` +
-            `Example:\n${prefix + command} Mr Christ X.pdf`
+            `Example:\n${prefix + command} sock.pdf`
         )
     }
     if (newName.includes('/') || newName.includes('\\')) {
@@ -5419,7 +5419,7 @@ case 'ren': {
         if (!buffer) {
             return reply('❌ Failed to download the file.')
         }
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 document: buffer,
@@ -5517,10 +5517,10 @@ case 'gcstatus': {
     }
     let targetGroupName = groupId
     try {
-        const meta = await Mr Christ X.groupMetadata(groupId)
+        const meta = await sock.groupMetadata(groupId)
         targetGroupName = meta?.subject || groupId
     } catch {}
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: {
             text: '⏳',
             key: m.key
@@ -5529,7 +5529,7 @@ case 'gcstatus': {
     try {
         if (!m.quoted) {
             if (!msgText) {
-                await Mr Christ X.sendMessage(m.chat, {
+                await sock.sendMessage(m.chat, {
                     react: {
                         text: '❌',
                         key: m.key
@@ -5547,7 +5547,7 @@ case 'gcstatus': {
                     `.gcstatus -#FF0000-#FFFFFF-3 Hello group`
                 )
             }
-            await Mr Christ X.sendMessage(groupId, {
+            await sock.sendMessage(groupId, {
                 groupStatusMessage: {
                     text: msgText,
                     backgroundColor,
@@ -5555,13 +5555,13 @@ case 'gcstatus': {
                     font
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: {
                     text: '✅',
                     key: m.key
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 text: `Group status text sent to ${targetGroupName}`
             })
             return
@@ -5579,7 +5579,7 @@ case 'gcstatus': {
             if (!textMessage) {
                 return reply('Quoted message contains no text.')
             }
-            await Mr Christ X.sendMessage(groupId, {
+            await sock.sendMessage(groupId, {
                 groupStatusMessage: {
                     text: textMessage,
                     backgroundColor,
@@ -5587,77 +5587,77 @@ case 'gcstatus': {
                     font
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: {
                     text: '✅',
                     key: m.key
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 text: `Group status text sent to ${targetGroupName}`
             })
             return
         }
         if (/image/.test(mime)) {
             const buffer = await quoted.download()
-            await Mr Christ X.sendMessage(groupId, {
+            await sock.sendMessage(groupId, {
                 groupStatusMessage: {
                     image: buffer,
                     caption
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: {
                     text: '✅',
                     key: m.key
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 text: `Group status image sent to ${targetGroupName}`
             })
             return
         }
         if (/video/.test(mime)) {
             const buffer = await quoted.download()
-            await Mr Christ X.sendMessage(groupId, {
+            await sock.sendMessage(groupId, {
                 groupStatusMessage: {
                     video: buffer,
                     caption,
                     mimetype: 'video/mp4'
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: {
                     text: '✅',
                     key: m.key
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 text: `Group status video sent to ${targetGroupName}`
             })
             return
         }
         if (/audio/.test(mime)) {
             const buffer = await quoted.download()
-            await Mr Christ X.sendMessage(groupId, {
+            await sock.sendMessage(groupId, {
                 groupStatusMessage: {
                     audio: buffer,
                     mimetype: mime || 'audio/mp4',
                     ptt: true
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: {
                     text: '✅',
                     key: m.key
                 }
             })
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 text: `Group status audio sent to ${targetGroupName}`
             })
             return
         }
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: {
                 text: '❌',
                 key: m.key
@@ -5668,7 +5668,7 @@ case 'gcstatus': {
         )
     } catch (err) {
         console.log('GroupStatus error:', err)
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: {
                 text: '❌',
                 key: m.key
@@ -5683,7 +5683,7 @@ break
 case 'tempemail':
 case 'tempmail': {
     try {
-        const { data } = await axios.get('https://Revolution MD-apis.zone.id/tools/tempemail')
+        const { data } = await axios.get('https://elitepro-apis.zone.id/tools/tempemail')
 
         if (!data?.success || !data.email) {
             return reply('❌ Failed to generate temporary email.')
@@ -5714,7 +5714,7 @@ case 'tempinbox': {
         }
 
         const { data } = await axios.get(
-            `https://Revolution MD-apis.zone.id/tools/tempemail?email=${encodeURIComponent(text)}`
+            `https://elitepro-apis.zone.id/tools/tempemail?email=${encodeURIComponent(text)}`
         )
 
         if (!data?.success) {
@@ -5756,7 +5756,7 @@ case 'listsudo': {
         if (!isCreator) {
             return reply(mess.owner)
         }
-        const userId = Mr Christ X.user?.id?.split(':')[0] || 'Not defined'
+        const userId = sock.user?.id?.split(':')[0] || 'Not defined'
         const owners = owner
         let msg =
             `*List of owners:*\n\n` +
@@ -5776,11 +5776,11 @@ case 'copilot': {
     if (!text) return reply(`Example:\n${prefix + command} who is the owner of Mr Christ X`)
     
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "🔍", key: m.key }
         })
         
-        const apiUrl = `https://Revolution MD-apis.zone.id/ai/copilot?q=${encodeURIComponent(text)}`
+        const apiUrl = `https://elitepro-apis.zone.id/ai/copilot?q=${encodeURIComponent(text)}`
         const { data } = await axios.get(apiUrl)
         
         if (!data || !data.success) {
@@ -5798,7 +5798,7 @@ case 'copilot': {
         
         resultText += `> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: resultText
         }, { quoted: m })
         
@@ -5823,14 +5823,14 @@ case 'approve': {
         } else if (args[0]) {
             users = [args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net']
         } else {
-            const requests = await Mr Christ X.groupRequestParticipantsList(m.chat)
+            const requests = await sock.groupRequestParticipantsList(m.chat)
             if (!requests || requests.length === 0) {
                 return reply('✅ No pending join requests.')
             }
             users = requests.map(v => v.jid)
         }
         
-        await Mr Christ X.groupRequestParticipantsUpdate(
+        await sock.groupRequestParticipantsUpdate(
             m.chat,
             users,
             'approve'
@@ -5845,7 +5845,7 @@ case 'approve': {
         
         approvedText += `\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: approvedText,
             mentions: users
         }, { quoted: m })
@@ -5871,14 +5871,14 @@ case 'reject': {
         } else if (args[0]) {
             users = [args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net']
         } else {
-            const requests = await Mr Christ X.groupRequestParticipantsList(m.chat)
+            const requests = await sock.groupRequestParticipantsList(m.chat)
             if (!requests || requests.length === 0) {
                 return reply('✅ No pending join requests.')
             }
             users = requests.map(v => v.jid)
         }
         
-        await Mr Christ X.groupRequestParticipantsUpdate(
+        await sock.groupRequestParticipantsUpdate(
             m.chat,
             users,
             'reject'
@@ -5893,7 +5893,7 @@ case 'reject': {
         
         rejectText += `\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: rejectText,
             mentions: users
         }, { quoted: m })
@@ -5920,7 +5920,7 @@ case 'group-id': {
     const inviteCode = match[1];
 
     try {
-        const res = await Mr Christ X.groupGetInviteInfo(inviteCode);
+        const res = await sock.groupGetInviteInfo(inviteCode);
 
         const msgText = 
 `👥 *Whatsapp Group Info:*
@@ -5937,7 +5937,7 @@ ${res.id}
 ${text}`;
 
         await sendInteractiveMessage(
-            Mr Christ X,
+            sock,
             m.chat,
             {
                 text: msgText,
@@ -5965,21 +5965,21 @@ case 'imagine': {
     if (!q) return reply(`⚠️ Example: *${prefix + command} a man walking on the moon*`)
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "🎨", key: m.key }
         })
 
         const { data } = await axios.get(
-            `https://Revolution MD-apis.zone.id/ai/imagine?prompt=${encodeURIComponent(q)}`,
+            `https://elitepro-apis.zone.id/ai/imagine?prompt=${encodeURIComponent(q)}`,
             { responseType: 'arraybuffer' }
         )
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: data,
             caption: `*Image Generated Successfully ✅*`
         }, { quoted: m })
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "✅", key: m.key }
         })
 
@@ -6008,7 +6008,7 @@ case 'analyze': {
         
         fs.unlinkSync(tempPath)
         
-        const apiUrl = `https://Revolution MD-apis.zone.id/ai/analyze?url=${encodeURIComponent(imageUrl)}&question=${encodeURIComponent(q)}`
+        const apiUrl = `https://elitepro-apis.zone.id/ai/analyze?url=${encodeURIComponent(imageUrl)}&question=${encodeURIComponent(q)}`
         const { data } = await axios.get(apiUrl)
         
         if (!data.status) {
@@ -6053,7 +6053,7 @@ ${prefix + command} Mr Christ X | 35K | Welcome To My Channel | 06/04/20`)
 
 try {
 
-await Mr Christ X.sendMessage(m.chat, { react: { text: "📢", key: m.key } })
+await sock.sendMessage(m.chat, { react: { text: "📢", key: m.key } })
 
 let avatar
 
@@ -6065,14 +6065,14 @@ avatar = upload.url
 
 } else {
 
-avatar = await Mr Christ X.profilePictureUrl(m.sender, 'image')
+avatar = await sock.profilePictureUrl(m.sender, 'image')
 .catch(() => 'https://files.catbox.moe/5x0h7n.jpg')
 
 }
 
 let api = `https://api.zenzxz.my.id/maker/fakechannel?url=${encodeURIComponent(avatar)}&name=${encodeURIComponent(name)}&followers=${encodeURIComponent(followers)}&desc=${encodeURIComponent(desc)}&date=${encodeURIComponent(date)}`
 
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
 image: { url: api },
 caption: `📢 *Fake Channel Generated*
 
@@ -6083,7 +6083,7 @@ caption: `📢 *Fake Channel Generated*
 > *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`
 }, { quoted: m })
 
-await Mr Christ X.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
+await sock.sendMessage(m.chat, { react: { text: "✅", key: m.key } })
 
 } catch (err) {
 console.log(err)
@@ -6100,7 +6100,7 @@ if (!text) return reply(`⚠️ Usage Example :
 
 ${prefix + command} 5.000`)
 
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
 react: { text: "💳", key: m.key }
 })
 
@@ -6108,14 +6108,14 @@ let nominal = text.trim()
 
 let api = `https://api.zenzxz.my.id/maker/fakedanav2?nominal=${encodeURIComponent(nominal)}`
 
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
 image: { url: api },
 caption: `💳 *Fake Dana Generated*
 💰 Nominal : ${nominal}
 > *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ©*`
 }, { quoted: m })
 
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
 react: { text: "✅", key: m.key }
 })
 
@@ -6125,7 +6125,7 @@ console.log("FakeDana Error:", err)
 
 reply(`❌ Failed to create Fake Dana image.`)
 
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
 react: { text: "❌", key: m.key }
 })
 
@@ -6136,12 +6136,12 @@ case 'country': case 'countries': {
     if (!q) return reply(`⚠️ Example: *${prefix + command} nigeria*`);
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "🌍", key: m.key }
         });
 
         const { data } = await axios.get(
-            `https://Revolution MD-apis.zone.id/search/countries?q=${encodeURIComponent(q)}`
+            `https://elitepro-apis.zone.id/search/countries?q=${encodeURIComponent(q)}`
         );
 
         if (!data.status || !data.result) {
@@ -6163,12 +6163,12 @@ case 'country': case 'countries': {
 *Languages:* ${languages}
         `;
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: { url: country.flag.image },
             caption: caption
         }, { quoted: m });
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: "✅", key: m.key }
         });
 
@@ -6187,7 +6187,7 @@ if (!q) return reply("Please provide a message you want to edit to.")
 
 let key = m.quoted
 
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
     edit: key,
     text: q
 })
@@ -6197,7 +6197,7 @@ break
 case 'blocklist': {
 if (!isCreator) return reply(mess.owner)
 
-let block = await Mr Christ X.fetchBlocklist()
+let block = await sock.fetchBlocklist()
 
 if (!block || block.length === 0) {
 return reply("No users are blocked.")
@@ -6209,7 +6209,7 @@ for (let i of block) {
 teks += `• @${i.split("@")[0]}\n`
 }
 
-Mr Christ X.sendMessage(m.chat, {
+sock.sendMessage(m.chat, {
 text: teks,
 mentions: block
 }, { quoted: m })
@@ -6221,7 +6221,7 @@ if (!q) return reply(`⚠️ Example:\n${prefix + command} https://t.me/addstick
 
 try {
 
-await Mr Christ X.sendMessage(m.chat,{
+await sock.sendMessage(m.chat,{
 react:{ text:"📦", key:m.key }
 })
 
@@ -6244,7 +6244,7 @@ let text = `*📦 TELEGRAM STICKER PACK*
 ⏳ Sending stickers...
 > ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ`
 
-await Mr Christ X.sendMessage(m.chat,{ text },{ quoted:m })
+await sock.sendMessage(m.chat,{ text },{ quoted:m })
 
 let sent = 0
 
@@ -6255,7 +6255,7 @@ if (!s.url.endsWith(".webp")) continue
 
 try {
 
-await Mr Christ X.sendImageAsSticker(
+await sock.sendImageAsSticker(
 m.chat,
 s.url,
 m,
@@ -6273,14 +6273,14 @@ console.log("Sticker error:", e)
 
 }
 
-await Mr Christ X.sendMessage(m.chat,{
+await sock.sendMessage(m.chat,{
 text:`*✅ STICKERS SENT*
 📦 Pack: ${pack.title}
 📤 Sent: ${sent} stickers
 > ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ`
 },{ quoted:m })
 
-await Mr Christ X.sendMessage(m.chat,{
+await sock.sendMessage(m.chat,{
 react:{ text:"✅", key:m.key }
 })
 
@@ -6302,7 +6302,7 @@ txt += `🎙️ Auto Recording   : ${autoRecording ? "✅ ON" : "❌ OFF"}\n`
 txt += `🎧 Auto RecordType  : ${autorecordtype ? "✅ ON" : "❌ OFF"}\n`
 txt += `📝 Auto Bio         : ${autobio ? "✅ ON" : "❌ OFF"}\n`
 txt += `✨ Auto React       : ${autoreact ? "✅ ON" : "❌ OFF"}\n`
-txt += `🤖 Bot Mode         : ${Mr Christ X.public ? "PUBLIC" : "PRIVATE"}\n`
+txt += `🤖 Bot Mode         : ${sock.public ? "PUBLIC" : "PRIVATE"}\n`
 txt += `🔤 Prefix           : ${prefix || "None"}\n\n`
 txt += `📌 *Available Commands*\n`
 txt += `${prefix}autoviewstatus on/off\n`
@@ -6321,8 +6321,8 @@ txt += `${prefix}setprefix <prefix/none>\n`
 txt += `${prefix}groupsettings\n`
 txt += `> ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ`
 
-await Mr Christ X.sendMessage(m.chat, {
-    image: Revolution MDpic,
+await sock.sendMessage(m.chat, {
+    image: RevolutionMDpic,
     caption: txt
 }, { quoted: m })
 }
@@ -6343,7 +6343,7 @@ target = number + '@s.whatsapp.net'
 
 let pp
 try {
-pp = await Mr Christ X.profilePictureUrl(target, 'image')
+pp = await sock.profilePictureUrl(target, 'image')
 } catch {
 pp = defaultPP
 }
@@ -6352,7 +6352,7 @@ let about = "No status"
 let setAt = ""
 
 try {
-const statusData = await Mr Christ X.fetchStatus(target)
+const statusData = await sock.fetchStatus(target)
 if (statusData && statusData[0] && statusData[0].status) {
 about = statusData[0].status.status || "No status"
 setAt = statusData[0].status.setAt
@@ -6364,7 +6364,7 @@ setAt = statusData[0].status.setAt
 let businessText = ""
 
 try {
-const biz = await Mr Christ X.getBusinessProfile(target)
+const biz = await sock.getBusinessProfile(target)
 if (biz) {
 
 let hours = ""
@@ -6394,7 +6394,7 @@ const caption = `*User Profile*
 • About: ${about}${setAt}
 ${businessText}`
 
-await Mr Christ X.sendMessage(
+await sock.sendMessage(
 m.chat,
 {
 image: { url: pp },
@@ -6501,7 +6501,7 @@ case 'aivoice': {
             query = query ? query + ' ' + m.quoted.text : m.quoted.text;
         }
         if (!query) return reply(`Example: .aivoice Hello or reply to a message`);
-        await Mr Christ X.sendPresenceUpdate('recording', m.chat);
+        await sock.sendPresenceUpdate('recording', m.chat);
         const aiRes = await axios.get(`https://api.bk9.dev/ai/copilot?q=${encodeURIComponent(query)}`);
         if (!aiRes.data?.status || !aiRes.data?.BK9?.response) {
             return reply('❌ Failed to generate AI response.');
@@ -6525,7 +6525,7 @@ case 'aivoice': {
             responseType: 'arraybuffer'
         });
         const voice = await toPTT(Buffer.from(res.data), 'mp3');
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 audio: voice,
@@ -6542,7 +6542,7 @@ case 'aivoice': {
 break
 case 'knackvideo': {
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🎬', key: m.key }
         })
         
@@ -6555,13 +6555,13 @@ case 'knackvideo': {
         
         const caption = `🎥 *Random knacking Video*`
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             video: { url: data.downloadUrl },
             mimetype: 'video/mp4',
             caption
         }, { quoted: m })
         
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
         
@@ -6581,9 +6581,9 @@ case 'setmenuimage': case 'setbotimage': {
     try {
         let media = await quoted.download()
 
-        fs.writeFileSync('./database/Revolution MDpic.jpg', media)
+        fs.writeFileSync('./database/RevolutionMDpic.jpg', media)
 
-        Revolution MDpic = media
+        RevolutionMDpic = media
 
         reply('✅ Menu image updated successfully!')
 
@@ -6621,11 +6621,11 @@ case 'ephoto': {
             return reply(`⚠️ Please provide text.\nExample: *${prefix + command} lighteffects Mr Christ X*`);
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🎨', key: m.key }
         });
 
-        const apiUrl = `https://Revolution MD-apis.vercel.app/ephoto?text=${encodeURIComponent(text)}&type=${type}`;
+        const apiUrl = `https://elitepro-apis.vercel.app/ephoto?text=${encodeURIComponent(text)}&type=${type}`;
 
         const res = await fetch(apiUrl);
         const data = await res.json();
@@ -6641,7 +6641,7 @@ case 'ephoto': {
             }).join(", ")}`);
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             image: { url: data.result },
             caption: '✅ Image successfully created'
         }, { quoted: m });
@@ -6656,27 +6656,27 @@ case 'brat': {
     try {
         if (!text) return reply(`⚠️ Example: *${prefix + command} hi*`)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🎨', key: m.key }
         })
 
-        const apiUrl = `https://Revolution MD-apis.vercel.app/canvas?text=${encodeURIComponent(text)}`
+        const apiUrl = `https://elitepro-apis.vercel.app/canvas?text=${encodeURIComponent(text)}`
 
-        const stik = await Mr Christ X.sendImageAsSticker(m.chat, apiUrl, m, {
+        const stik = await sock.sendImageAsSticker(m.chat, apiUrl, m, {
             packname: global.packname,
             author: global.author
         })
 
         if (stik) fs.unlinkSync(stik)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
     } catch (err) {
         console.error('Brat Sticker Error:', err)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -6701,7 +6701,7 @@ ${prefix + command} this is the issue`)
         const senderName = pushname || 'Unknown'
         const chatName = m.isGroup ? groupName : 'Private Chat'
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '📩', key: m.key }
         })
 
@@ -6855,14 +6855,14 @@ ${quotedText}`
             if (!data.ok) return reply('❌ Failed to send report')
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
         reply('✅ Your report has been sent successfully!')
     } catch (error) {
         console.log(error)
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
         reply('Error sending report')
@@ -6908,7 +6908,7 @@ Use ${prefix + command} list to view all currencies.`);
 
         // Full Frankfurter currency list
         if (args[0]?.toLowerCase() === 'list') {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: '⏳', key: m.key }
             });
 
@@ -6938,7 +6938,7 @@ Use ${prefix + command} list to view all currencies.`);
                 }
 
                 if (!currencies.length) {
-                    await Mr Christ X.sendMessage(m.chat, {
+                    await sock.sendMessage(m.chat, {
                         react: { text: '❌', key: m.key }
                     });
 
@@ -6985,7 +6985,7 @@ Use ${prefix + command} list to view all currencies.`);
                     output += groups[letter].join('\n');
                 }
 
-                await Mr Christ X.sendMessage(m.chat, {
+                await sock.sendMessage(m.chat, {
                     react: { text: '✅', key: m.key }
                 });
 
@@ -6994,7 +6994,7 @@ Use ${prefix + command} list to view all currencies.`);
             } catch (err) {
                 console.error('currency list error:', err);
 
-                await Mr Christ X.sendMessage(m.chat, {
+                await sock.sendMessage(m.chat, {
                     react: { text: '❌', key: m.key }
                 });
 
@@ -7014,17 +7014,17 @@ ${prefix + command} 5000 NGN GHS
 Use ${prefix + command} list to view all currencies.`);
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '💱', key: m.key }
         });
 
         const apiUrl =
-            `https://Revolution MD-apis.zone.id/search/money?amount=${encodeURIComponent(amount)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+            `https://elitepro-apis.zone.id/search/money?amount=${encodeURIComponent(amount)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
         const { data } = await axios.get(apiUrl);
 
         if (!data?.success) {
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: '❌', key: m.key }
             });
 
@@ -7038,7 +7038,7 @@ Use ${prefix + command} list to view all currencies.`);
 💵 Converted: *${data.converted} ${data.to}*
 📅 Date: *${data.date}*`;
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         });
 
@@ -7047,7 +7047,7 @@ Use ${prefix + command} list to view all currencies.`);
     } catch (err) {
         console.error('Rate command error:', err);
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         });
 
@@ -7244,7 +7244,7 @@ case 'setfullprofilepicture': {
         const JimpModule = require('jimp')
         const Jimp = JimpModule.Jimp || JimpModule
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🖼️', key: m.key }
         })
 
@@ -7255,7 +7255,7 @@ case 'setfullprofilepicture': {
 
         const img = await image.getBufferAsync(Jimp.MIME_JPEG)
 
-        await Mr Christ X.query({
+        await sock.query({
             tag: 'iq',
             attrs: {
                 to: '@s.whatsapp.net',
@@ -7271,13 +7271,13 @@ case 'setfullprofilepicture': {
             ]
         })
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
         reply('Profile picture updated successfully')
     } catch (error) {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
         reply('Failed to update profile picture')
@@ -7289,7 +7289,7 @@ case 'addmetaai': {
     if (!m.isGroup) return reply('This command only works in groups.')
 
     try {
-        const res = await Mr Christ X.groupParticipantsUpdate(
+        const res = await sock.groupParticipantsUpdate(
             m.chat,
             ['867051314767696@bot'],
             'add'
@@ -7310,7 +7310,7 @@ case 'delmetaai': {
     if (!m.isGroup) return reply('❌ This command only works in groups.')
 
     try {
-        const res = await Mr Christ X.groupParticipantsUpdate(
+        const res = await sock.groupParticipantsUpdate(
             m.chat,
             ['867051314767696@bot'],
             'remove'
@@ -7330,11 +7330,11 @@ case 'listgroup': {
     if (!isCreator) return reply(mess.owner)
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '⏳', key: m.key }
         })
 
-        const groups = await Mr Christ X.groupFetchAllParticipating()
+        const groups = await sock.groupFetchAllParticipating()
 
         let teks = `*「 GROUP LIST 」*\n\n`
         let no = 1
@@ -7347,18 +7347,18 @@ case 'listgroup': {
 
         teks += `*Total Groups:* ${Object.keys(groups).length}`
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             text: teks
         }, { quoted: m })
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
     } catch (e) {
         console.error(e)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -7378,14 +7378,14 @@ case 'audiospeed': {
     let outputPath
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '⏳', key: m.key }
         })
 
         const tempDir = './database/temp'
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
 
-        inputPath = await Mr Christ X.downloadAndSaveMediaMessage(qmsg)
+        inputPath = await sock.downloadAndSaveMediaMessage(qmsg)
         outputPath = `${tempDir}/${Date.now()}.mp3`
 
         let filter = ''
@@ -7400,7 +7400,7 @@ case 'audiospeed': {
         exec(`ffmpeg -i "${inputPath}" -filter:a "${filter}" -vn "${outputPath}"`, async (err) => {
             if (err) {
                 console.error(err)
-                await Mr Christ X.sendMessage(m.chat, {
+                await sock.sendMessage(m.chat, {
                     react: { text: '❌', key: m.key }
                 })
                 return reply('Failed to process audio speed')
@@ -7408,12 +7408,12 @@ case 'audiospeed': {
 
             const buffer = fs.readFileSync(outputPath)
 
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 audio: buffer,
                 mimetype: 'audio/mpeg'
             }, { quoted: m })
 
-            await Mr Christ X.sendMessage(m.chat, {
+            await sock.sendMessage(m.chat, {
                 react: { text: '✅', key: m.key }
             })
 
@@ -7423,7 +7423,7 @@ case 'audiospeed': {
     } catch (e) {
         console.error(e)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -7439,11 +7439,11 @@ case '$': {
     if (!isCreator) return;
     if (!q) return reply(`⚠️ Provide a command\n\nExample:\n${prefix + command} ls`)
     try {
-        await Mr Christ X.sendMessage(m.chat, { react: { text: '⚙️', key: m.key } })
+        await sock.sendMessage(m.chat, { react: { text: '⚙️', key: m.key } })
         exec(q, { timeout: 60000, maxBuffer: 1024 * 1024 * 10 }, async (err, stdout, stderr) => {
             let output = stdout || stderr || '✅ Command executed (no output)'
             if (err) output = `❌ ${err.message}`
-            await Mr Christ X.sendMessage(m.chat, { text: output }, { quoted: m })
+            await sock.sendMessage(m.chat, { text: output }, { quoted: m })
         })
     } catch {
         reply('❌ Failed to execute command')
@@ -7482,7 +7482,7 @@ case 'rv': {
         if (quotedMsg?.audioMessage || x?.quoted?.mtype === 'audioMessage') {
             let buffer = await x.quoted.download()
 
-            return await Mr Christ X.sendMessage(
+            return await sock.sendMessage(
                 m.chat,
                 {
                     audio: buffer,
@@ -7496,7 +7496,7 @@ case 'rv': {
         if (quotedMsg?.imageMessage || x?.quoted?.mtype === 'imageMessage') {
             let buffer = await x.quoted.download()
 
-            return await Mr Christ X.sendMessage(
+            return await sock.sendMessage(
                 m.chat,
                 {
                     image: buffer
@@ -7508,7 +7508,7 @@ case 'rv': {
         if (quotedMsg?.videoMessage || x?.quoted?.mtype === 'videoMessage') {
             let buffer = await x.quoted.download()
 
-            return await Mr Christ X.sendMessage(
+            return await sock.sendMessage(
                 m.chat,
                 {
                     video: buffer
@@ -7546,7 +7546,7 @@ case 'roast': {
             }
         }
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             { react: { text: '🔥', key: m.key } }
         )
@@ -7564,7 +7564,7 @@ case 'roast': {
             roastText = `💬 Roast for @${target.split('@')[0]}\n\n${data.roast}`
         }
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 text: roastText,
@@ -7573,7 +7573,7 @@ case 'roast': {
             { quoted: contactMessage }
         )
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             { react: { text: '✅', key: m.key } }
         )
@@ -7594,9 +7594,9 @@ case 'carbon': {
             return reply(`Example:\n${prefix}carbon console.log("Hello World")\n\nOr reply to any text message with:\n${prefix}carbon`)
         }
 
-        const apiUrl = `https://Revolution MD-apis.zone.id/image/carbon?code=${encodeURIComponent(text)}`
+        const apiUrl = `https://elitepro-apis.zone.id/image/carbon?code=${encodeURIComponent(text)}`
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 image: { url: apiUrl },
@@ -7643,7 +7643,7 @@ case 'warn': {
         JSON.stringify(warnData, null, 2)
     )
 
-    await Mr Christ X.sendMessage(
+    await sock.sendMessage(
         m.chat,
         {
             text:
@@ -7656,7 +7656,7 @@ case 'warn': {
     )
 
     if (count >= 3) {
-        await Mr Christ X.groupParticipantsUpdate(
+        await sock.groupParticipantsUpdate(
             m.chat,
             [target],
             'remove'
@@ -7669,7 +7669,7 @@ case 'warn': {
             JSON.stringify(warnData, null, 2)
         )
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 text:
@@ -7752,7 +7752,7 @@ case 'listonline': {
   if (!global.presenceListenerAttached) {
     global.presenceListenerAttached = true;
 
-    Mr Christ X.ev.on('presence.update', ({ id, presences }) => {
+    sock.ev.on('presence.update', ({ id, presences }) => {
       for (const [participantJid, data] of Object.entries(presences)) {
         const online = data.lastKnownPresence === 'available' || data.lastKnownPresence === 'composing';
         const key = participantJid.split(':')[0] + '@' + participantJid.split('@')[1];
@@ -7763,7 +7763,7 @@ case 'listonline': {
       }
     });
 
-    Mr Christ X.ev.on('messages.receipt.update', (updates) => {
+    sock.ev.on('messages.receipt.update', (updates) => {
       for (const update of updates) {
         const sender = update.key?.participant || update.key?.remoteJid;
         if (sender) {
@@ -7777,7 +7777,7 @@ case 'listonline': {
     });
   }
 
-  const groupMetadata = await Mr Christ X.groupMetadata(m.chat);
+  const groupMetadata = await sock.groupMetadata(m.chat);
   const participants = groupMetadata.participants;
   const total = participants.length;
 
@@ -7796,7 +7796,7 @@ case 'listonline': {
 
   for (const p of participants) {
     try {
-      await Mr Christ X.presenceSubscribe(p.id);
+      await sock.presenceSubscribe(p.id);
     } catch {}
   }
 
@@ -7823,7 +7823,7 @@ case 'listonline': {
   for (const name of displayNames) {
     text += `- ${name}\n`;
   }
-  return await Mr Christ X.sendMessage(m.chat, {
+  return await sock.sendMessage(m.chat, {
     text,
     mentions: onlineJIDs
   });
@@ -7842,7 +7842,7 @@ case 'addpdf': {
             return reply('❌ Please reply to an image.');
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '📥', key: m.key }
         });
 
@@ -7865,7 +7865,7 @@ case 'addpdf': {
             return reply('❌ Maximum of 20 images reached.');
         }
 
-        const mediaPath = await Mr Christ X.downloadAndSaveMediaMessage(m.quoted);
+        const mediaPath = await sock.downloadAndSaveMediaMessage(m.quoted);
 
         const ext = path.extname(mediaPath) || '.jpg';
         const filePath = path.join(
@@ -7881,7 +7881,7 @@ case 'addpdf': {
 
         const count = existingFiles.length + 1;
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         });
 
@@ -7892,7 +7892,7 @@ case 'addpdf': {
         );
     } catch (error) {
         console.error('AddPDF Error:', error);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         });
         reply('❌ Failed to add image.');
@@ -7926,7 +7926,7 @@ case 'image2pdf': {
                 `📄 No images found.\n\nReply to an image with *${prefix}addpdf* first.`
             );
         }
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '📄', key: m.key }
         });
         const urls = [];
@@ -7939,7 +7939,7 @@ case 'image2pdf': {
             .map(url => `url=${encodeURIComponent(url)}`)
             .join('&');
         const apiUrl =
-            `https://Revolution MD-apis.zone.id/tools/img2pdf?${query}`;
+            `https://elitepro-apis.zone.id/tools/img2pdf?${query}`;
         const response = await axios.get(apiUrl, {
             responseType: 'arraybuffer',
             timeout: 120000
@@ -7947,7 +7947,7 @@ case 'image2pdf': {
         const fileName = text?.trim()
             ? text.trim().replace(/\.pdf$/i, '')
             : 'Image';
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 document: Buffer.from(response.data),
@@ -7964,12 +7964,12 @@ case 'image2pdf': {
             recursive: true,
             force: true
         });
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         });
     } catch (error) {
         console.error('IMG2PDF Error:', error);
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         });
         reply('❌ Failed to create PDF. Please try again.');
@@ -7993,7 +7993,7 @@ case 'resetpdf': {
             recursive: true,
             force: true
         });
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '🗑️', key: m.key }
         });
         reply('✅ PDF image collection cleared.');
@@ -8012,11 +8012,11 @@ case 'tictactoe': {
         const chat = m.chat
         if (global.xoGames.has(chat)) {
             const oldGame = global.xoGames.get(chat)
-            if (oldGame.listener) Mr Christ X.ev.off('messages.upsert', oldGame.listener)
+            if (oldGame.listener) sock.ev.off('messages.upsert', oldGame.listener)
             if (oldGame.timeout) clearTimeout(oldGame.timeout)
             global.xoGames.delete(chat)
         }
-        let metadata = await Mr Christ X.groupMetadata(chat)
+        let metadata = await sock.groupMetadata(chat)
         const resolveUser = async raw => {
             if (!raw) return null
             let participant = metadata.participants?.find(p =>
@@ -8027,7 +8027,7 @@ case 'tictactoe': {
             )
             if (!participant) {
                 try {
-                    metadata = await Mr Christ X.groupMetadata(chat)
+                    metadata = await sock.groupMetadata(chat)
                     participant = metadata.participants?.find(p =>
                         p.id === raw ||
                         p.lid === raw ||
@@ -8061,18 +8061,18 @@ ${game.board[6] || numbers[6]} ${game.board[7] || numbers[7]} ${game.board[8] ||
             return (participant?.pn || participant?.jid || jid).split('@')[0]
         }
         const sendBoard = async (quoted, text) => {
-            const sent = await Mr Christ X.sendMessage(chat, { text, mentions: game.players }, { quoted })
+            const sent = await sock.sendMessage(chat, { text, mentions: game.players }, { quoted })
             if (sent?.key?.id) game.messageId = sent.key.id
             return sent
         }
         const cleanup = () => {
             game.active = false
-            if (game.listener) Mr Christ X.ev.off('messages.upsert', game.listener)
+            if (game.listener) sock.ev.off('messages.upsert', game.listener)
             if (game.timeout) clearTimeout(game.timeout)
             global.xoGames.delete(chat)
         }
         const firstName = await getName(firstPlayer)
-        const firstMessage = await Mr Christ X.sendMessage(chat, {
+        const firstMessage = await sock.sendMessage(chat, {
             text: `🎮 *X AND O*
 ❌ @${firstPlayer.split('@')[0]}
 ⭕ Waiting for player...
@@ -8114,16 +8114,16 @@ ${board()}
                 if (!game.players.includes(sender)) return
                 if (sender !== game.turn) {
                     const turnName = await getName(game.turn)
-                    await Mr Christ X.sendMessage(chat, { text: `⏳ It's @${turnName}'s turn.`, mentions: [game.turn] }, { quoted: msg })
+                    await sock.sendMessage(chat, { text: `⏳ It's @${turnName}'s turn.`, mentions: [game.turn] }, { quoted: msg })
                     return
                 }
                 const position = parseInt(replyText.trim(), 10) - 1
                 if (!Number.isInteger(position) || position < 0 || position > 8) {
-                    await Mr Christ X.sendMessage(chat, { text: '❌ Invalid move.\n\n↪️ Reply to a number from 1-9.' }, { quoted: msg })
+                    await sock.sendMessage(chat, { text: '❌ Invalid move.\n\n↪️ Reply to a number from 1-9.' }, { quoted: msg })
                     return
                 }
                 if (game.board[position]) {
-                    await Mr Christ X.sendMessage(chat, { text: '❌ That position is already occupied.' }, { quoted: msg })
+                    await sock.sendMessage(chat, { text: '❌ That position is already occupied.' }, { quoted: msg })
                     return
                 }
                 const symbol = game.symbols[sender]
@@ -8131,7 +8131,7 @@ ${board()}
                 const won = wins.some(([a, b, c]) => game.board[a] === symbol && game.board[b] === symbol && game.board[c] === symbol)
                 if (won) {
                     const winner = await getName(sender)
-                    await Mr Christ X.sendMessage(chat, {
+                    await sock.sendMessage(chat, {
                         text: `🎮 *X AND O*
 ${board()}
 🏆 ${symbol} @${winner} *WINS!*`,
@@ -8141,7 +8141,7 @@ ${board()}
                     return
                 }
                 if (game.board.every(Boolean)) {
-                    await Mr Christ X.sendMessage(chat, {
+                    await sock.sendMessage(chat, {
                         text: `🎮 *X AND O*
 ${board()}
 🤝 *DRAW!*`
@@ -8162,11 +8162,11 @@ ${symbol} @${playerName} played.
             }
         }
         game.listener = listener
-        Mr Christ X.ev.on('messages.upsert', listener)
+        sock.ev.on('messages.upsert', listener)
         game.timeout = setTimeout(() => {
             if (!game.active) return
             cleanup()
-            Mr Christ X.sendMessage(chat, { text: '⌛ *X AND O*\n\nThe game has ended because there were no moves for 10 minutes.' }).catch(() => {})
+            sock.sendMessage(chat, { text: '⌛ *X AND O*\n\nThe game has ended because there were no moves for 10 minutes.' }).catch(() => {})
         }, 10 * 60 * 1000)
     } catch (err) {
         console.error('XO ERROR:', err)
@@ -8181,7 +8181,7 @@ case 'joingc':
                     if (!isUrl(args[0]) && !args[0].includes('whatsapp.com')) return reply('Link Invalid!')
                     reply(mess.wait)
                     let result = args[0].split('https://chat.whatsapp.com/')[1]
-                    await Mr Christ X.groupAcceptInvite(result).then((res) => reply(json(res))).catch((err) => reply(json(err)))
+                    await sock.groupAcceptInvite(result).then((res) => reply(json(res))).catch((err) => reply(json(err)))
                 } catch {
                     reply('Failed to join the Group')
                 }
@@ -8190,7 +8190,7 @@ case 'joingc':
                 if (!isCreator) return reply(mess.owner)
                 reply('Wait a moment, currently retrieving your session file')
                 let sesi = await fs.readFileSync('./session/creds.json')
-                Mr Christ X.sendMessage(m.chat, {
+                sock.sendMessage(m.chat, {
                     document: sesi,
                     mimetype: 'application/json',
                     fileName: 'creds.json'
@@ -8275,7 +8275,7 @@ break
 case 'mode': {
     if (!isCreator) return reply(mess.owner);
 
-    if (!text) return reply(`Mode: ${Mr Christ X.public ? 'public' : 'private'} | Options: ${prefix}mode private → PRIVATE, ${prefix}mode public → PUBLIC`);
+    if (!text) return reply(`Mode: ${sock.public ? 'public' : 'private'} | Options: ${prefix}mode private → PRIVATE, ${prefix}mode public → PUBLIC`);
 
     let input = text.toLowerCase();
 
@@ -8283,12 +8283,12 @@ case 'mode': {
         return reply(`Use:\n${prefix}mode public\n${prefix}mode private`);
     }
 
-    Mr Christ X.public = input === 'public';
+    sock.public = input === 'public';
 
     global.botMode = input;
     saveSettings();
 
-    await Mr Christ X.sendMessage(from, {
+    await sock.sendMessage(from, {
         react: {
             text: '✅',
             key: m.key
@@ -8312,12 +8312,12 @@ case 'setppbot': {
     if (!/image/.test(mime)) return reply(`Send/Reply image with caption ${prefix + command}`);
     if (/webp/.test(mime)) return reply(`Send/Reply image with caption ${prefix + command}`);
     
-    const medis = await Mr Christ X.downloadAndSaveMediaMessage(quoted, 'ppbot.jpeg');
+    const medis = await sock.downloadAndSaveMediaMessage(quoted, 'ppbot.jpeg');
     
     if (args[0] === 'full') {
         const { img } = await generateProfilePicture(medis);
         
-        await Mr Christ X.query({
+        await sock.query({
             tag: 'iq',
             attrs: {
                 to: botNumber,
@@ -8334,7 +8334,7 @@ case 'setppbot': {
         fs.unlinkSync(medis);
         reply(mess.done);
     } else {
-        await Mr Christ X.updateProfilePicture(botNumber, { url: medis });
+        await sock.updateProfilePicture(botNumber, { url: medis });
         fs.unlinkSync(medis);
         reply(mess.done);
     }
@@ -8352,7 +8352,7 @@ case 'block': {
     if (!target) return reply(`_Unable to identify user to block._`);
 
     try {
-        await Mr Christ X.updateBlockStatus(target, 'block');
+        await sock.updateBlockStatus(target, 'block');
         reply(`✅ Blocked: @${target.split('@')[0]}`, { mentions: [target] });
     } catch (err) {
         reply(`❌ Failed to block: ${err.message}`);
@@ -8371,7 +8371,7 @@ case 'unblock': {
     if (!target) return reply(`_Unable to identify user to unblock._`);
 
     try {
-        await Mr Christ X.updateBlockStatus(target, 'unblock');
+        await sock.updateBlockStatus(target, 'unblock');
         reply(`✅ Unblocked: @${target.split('@')[0]}`, { mentions: [target] });
     } catch (err) {
         reply(`❌ Failed to unblock: ${err.message}`);
@@ -8381,7 +8381,7 @@ break
             case 'left':
                 if (!isCreator) return reply(mess.owner)
                 if (!m.isGroup) return reply(mess.group)
-                await Mr Christ X.groupLeave(m.chat)
+                await sock.groupLeave(m.chat)
                 break
             case 'backup':
                 if (!isCreator) return reply(mess.owner)
@@ -8389,7 +8389,7 @@ break
                 reply(mess.wait)
                 exec('zip backup.zip *')
                 let malas = await fs.readFileSync('./backup.zip')
-                await Mr Christ X.sendMessage(m.chat, {
+                await sock.sendMessage(m.chat, {
                     document: malas,
                     mimetype: 'application/zip',
                     fileName: 'backup.zip'
@@ -8401,14 +8401,14 @@ break
             case 'bcgroup': {
                 if (!isCreator) return reply(mess.owner)
                 if (!text) return reply(`Which text?\n\nExample : ${prefix + command} It's holiday tomorrow `)
-                let getGroups = await Mr Christ X.groupFetchAllParticipating()
+                let getGroups = await sock.groupFetchAllParticipating()
                 let groups = Object.entries(getGroups).slice(0).map(entry => entry[1])
                 let anu = groups.map(v => v.id)
                 reply(`Send Broadcast To ${anu.length} Group Chat, End Time ${anu.length * 1.5} second`)
                 for (let i of anu) {
                     await sleep(1500)
                     let a = '```' + `\n\n${text}\n\n` + '```' + '\n\n\nʙʀᴏᴀᴅᴄᴀsᴛ'
-                    Mr Christ X.sendMessage(i, {
+                    sock.sendMessage(i, {
                         text: a,
                         contextInfo: {
                             externalAdReply: {
@@ -8430,7 +8430,7 @@ case 'getcase': {
 if (!isCreator) return reply(mess.owner)
 if (!q) return reply('❌ Provide a case name.')
 try {
-const data = fs.readFileSync("./Revolution MD.js", "utf8")
+const data = fs.readFileSync("./ElitePro.js", "utf8")
 const result = data.split(`case '${q}'`)
 if (result.length < 2) return reply('❌ Case not found.')
 const caseCode = "case '" + q + "'" + result[1].split("break")[0] + "break"
@@ -8453,7 +8453,7 @@ if (!m.quoted) return reply('Reply to a message you want to delete.')
         participant: m.isGroup ? m.quoted.sender : undefined
     };
     
-    await Mr Christ X.sendMessage(m.chat, { delete: key });
+    await sock.sendMessage(m.chat, { delete: key });
 }
 break
 case 'closetime':
@@ -8492,7 +8492,7 @@ switch (unitClose) {
 
 reply(`Close time ${amountClose} ${unitClose} starting from now`);
 setTimeout(async () => {
-    await Mr Christ X.groupSettingUpdate(m.chat, 'announcement');
+    await sock.groupSettingUpdate(m.chat, 'announcement');
     reply('*Closed* - Group closed by admin. Now only admins can send messages.');
 }, timerClose);
 break;
@@ -8528,7 +8528,7 @@ switch (unitOpen) {
 
 reply(`Open time ${amountOpen} ${unitOpen} starting from now`);
 setTimeout(async () => {
-    await Mr Christ X.groupSettingUpdate(m.chat, 'not_announcement');
+    await sock.groupSettingUpdate(m.chat, 'not_announcement');
     reply('*Opened* - The group is opened by admin. Now members can send messages.');
 }, timerOpen);
 break
@@ -8551,7 +8551,7 @@ case 'kick': {
         target = number + '@s.whatsapp.net';
     }
 
-    const metadata = await Mr Christ X.groupMetadata(m.chat);
+    const metadata = await sock.groupMetadata(m.chat);
     const participants = metadata.participants || [];
 
     let realJid = target;
@@ -8575,7 +8575,7 @@ case 'kick': {
     let number = realJid.split('@')[0];
 
     try {
-        await Mr Christ X.groupParticipantsUpdate(m.chat, [realJid], 'remove');
+        await sock.groupParticipantsUpdate(m.chat, [realJid], 'remove');
         reply(`✅ ${number} has been removed successfully!`);
     } catch (e) {
         console.error(e);
@@ -8604,7 +8604,7 @@ case 'add': {
     }
 
     try {
-        await Mr Christ X.groupParticipantsUpdate(m.chat, [target], 'add');
+        await sock.groupParticipantsUpdate(m.chat, [target], 'add');
         reply(`✅ ${number} has been added successfully!`);
     } catch (e) {
         console.error(e);
@@ -8626,13 +8626,13 @@ let blockwwwww = m.mentionedJid[0]
     ? m.quoted.sender
     : text.replace(/[^0-9]/g, '') + '@s.whatsapp.net'
 
-await Mr Christ X.groupParticipantsUpdate(
+await sock.groupParticipantsUpdate(
     m.chat,
     [blockwwwww],
     'promote'
 )
 
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
     react: {
         text: '✅',
         key: m.key
@@ -8653,9 +8653,9 @@ let user = m.mentionedJid[0]
 ? m.quoted.sender
 : text.replace(/[^0-9]/g, '') + '@s.whatsapp.net'
 
-await Mr Christ X.groupParticipantsUpdate(m.chat, [user], 'demote')
+await sock.groupParticipantsUpdate(m.chat, [user], 'demote')
 
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
 react: {
 text: '✅',
 key: m.key
@@ -8668,7 +8668,7 @@ if (!m.isGroup) return reply(mess.group)
 if (!isAdmins && !isGroupOwner && !isCreator) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
 if (!text) return reply('✏️ Please provide the new *group name*!')
-await Mr Christ X.groupUpdateSubject(m.chat, text)
+await sock.groupUpdateSubject(m.chat, text)
     .then(() => reply(mess.success))
     .catch((err) => reply(json(err)))
 break
@@ -8680,7 +8680,7 @@ if (!isBotAdmins) return reply(mess.botAdmin)
 if (!q) return reply('📝 Please provide the new *group description*!')
 
 try {
-await Mr Christ X.groupUpdateDescription(m.chat, q)
+await sock.groupUpdateDescription(m.chat, q)
 reply('✅ Done successfully changed the group description')
 } catch (err) {
 reply(JSON.stringify(err))
@@ -8697,12 +8697,12 @@ if (!isBotAdmins) return reply(mess.botAdmin)
 if (!quoted) return reply(`Send/Reply Image With Caption ${prefix + command}`)
                 if (!/image/.test(mime)) return reply(`Send/Reply Image With Caption ${prefix + command}`)
                 if (/webp/.test(mime)) return reply(`Send/Reply Image With Caption ${prefix + command}`)
-                var medis = await Mr Christ X.downloadAndSaveMediaMessage(quoted, 'ppbot.jpeg')
+                var medis = await sock.downloadAndSaveMediaMessage(quoted, 'ppbot.jpeg')
                 if (args[0] == 'full') {
                     var {
                         img
                     } = await generateProfilePicture(medis)
-                    await Mr Christ X.query({
+                    await sock.query({
                         tag: 'iq',
                         attrs: {
                             to: m.chat,
@@ -8720,7 +8720,7 @@ if (!quoted) return reply(`Send/Reply Image With Caption ${prefix + command}`)
                     fs.unlinkSync(medis)
                     reply(mess.done)
                 } else {
-                    var memeg = await Mr Christ X.updateProfilePicture(m.chat, {
+                    var memeg = await sock.updateProfilePicture(m.chat, {
                         url: medis
                     })
                     fs.unlinkSync(medis)
@@ -8743,7 +8743,7 @@ case 'tagall': {
         teks += `➤ @${mem.id.split('@')[0]}\n`
         mentions.push(mem.id)
     }
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         text: teks.trim(),
         mentions
     }, { quoted: m })
@@ -8756,7 +8756,7 @@ case 'everyone': {
 
     const subject = q ? q : 'Hello everyone 👋'
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         text: '@' + m.chat,
         contextInfo: {
             mentionedJid: participants.map(x => x.id),
@@ -8775,7 +8775,7 @@ case 'hidetag':
 if (!m.isGroup) return reply(mess.group)
 if (!isAdmins && !isGroupOwner && !isCreator) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
-Mr Christ X.sendMessage(m.chat, {
+sock.sendMessage(m.chat, {
                     text: q ? q : '',
                     mentions: participants.map(a => a.id)
                 }, {
@@ -8787,7 +8787,7 @@ if (!m.isGroup) return reply(mess.group)
 if (!isBotAdmins) return reply(mess.botAdmin)
 if (!isAdmins) return reply(mess.admin)
 if (!m.quoted) return reply(`Reply messages with captions ${prefix + command}`)
-                Mr Christ X.sendMessage(m.chat, {
+                sock.sendMessage(m.chat, {
                     forward: m.quoted.fakeObj,
                     mentions: participants.map(a => a.id)
                 })
@@ -8797,9 +8797,9 @@ if (!m.isGroup) return reply(mess.group)
 if (!isAdmins && !isGroupOwner && !isCreator) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
 if (args[0] === 'close') {
-                    await Mr Christ X.groupSettingUpdate(m.chat, 'announcement').then((res) => reply(`🔒 Group has been *closed* — only admins can send messages.`)).catch((err) => reply(json(err)))
+                    await sock.groupSettingUpdate(m.chat, 'announcement').then((res) => reply(`🔒 Group has been *closed* — only admins can send messages.`)).catch((err) => reply(json(err)))
                 } else if (args[0] === 'open') {
-                    await Mr Christ X.groupSettingUpdate(m.chat, 'not_announcement').then((res) => reply(`✅ Group has been *opened* — members can now send messages.`)).catch((err) => reply(json(err)))
+                    await sock.groupSettingUpdate(m.chat, 'not_announcement').then((res) => reply(`✅ Group has been *opened* — members can now send messages.`)).catch((err) => reply(json(err)))
                 } else {
                   reply(`⚙️ Usage: - *${prefix + command} open - ${prefix + command} close*`)
                 }
@@ -8809,9 +8809,9 @@ if (!m.isGroup) return reply(mess.group)
 if (!isAdmins && !isGroupOwner && !isCreator) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
 if (args[0] === 'open') {
-                    await Mr Christ X.groupSettingUpdate(m.chat, 'unlocked').then((res) => reply(`Successfully Opened Group Edit Info🧑‍💻️`)).catch((err) => reply(json(err)))
+                    await sock.groupSettingUpdate(m.chat, 'unlocked').then((res) => reply(`Successfully Opened Group Edit Info🧑‍💻️`)).catch((err) => reply(json(err)))
                 } else if (args[0] === 'close') {
-                    await Mr Christ X.groupSettingUpdate(m.chat, 'locked').then((res) => reply(`Successfully Closed Group Edit Info🕊️`)).catch((err) => reply(json(err)))
+                    await sock.groupSettingUpdate(m.chat, 'locked').then((res) => reply(`Successfully Closed Group Edit Info🕊️`)).catch((err) => reply(json(err)))
                 } else {
                     reply(`Mode ${command}\n\n\nType ${prefix + command}on/off`)
                 }
@@ -8822,15 +8822,15 @@ case 'invite': {
     if (!m.isGroup) return reply(mess.group);
     if (!isAdmins && !isGroupOwner && !isCreator) return reply(mess.admin);
     if (!isBotAdmins) return reply(mess.botAdmin);
-    const inviteCode = await Mr Christ X.groupInviteCode(m.chat);
+    const inviteCode = await sock.groupInviteCode(m.chat);
     const groupLink = `https://chat.whatsapp.com/${inviteCode}`;
     let groupPic;
     try {
-        groupPic = await Mr Christ X.profilePictureUrl(m.chat, "image");
+        groupPic = await sock.profilePictureUrl(m.chat, "image");
     } catch {
-        groupPic = "https://Revolution MD-url.zone.id/1766280889140k1p5o0.jpg";
+        groupPic = "https://elitepro-url.zone.id/1766280889140k1p5o0.jpg";
     }
-    await sendButtons(Mr Christ X, m.chat, {
+    await sendButtons(sock, m.chat, {
         image: { url: groupPic },
         text: `👥 *${groupMetadata.subject}*
 
@@ -8866,14 +8866,14 @@ case 'resetlink':
 if (!m.isGroup) return reply(mess.group)
 if (!isAdmins && !isGroupOwner && !isCreator) return reply(mess.admin)
 if (!isBotAdmins) return reply(mess.botAdmin)
-await Mr Christ X.groupRevokeInvite(m.chat)
+await sock.groupRevokeInvite(m.chat)
                     .then(res => {
                         reply(`Successful Reset, Group Invite Link ${groupMetadata.subject}`)
                     }).catch((err) => reply(json(err)))
 break
 case 'runtime':
 case 'uptime': {
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: "⚙️", key: m.key }
     });
     const uptime = process.uptime();
@@ -8902,11 +8902,11 @@ case 'uptime': {
             }
         },
         {
-            userJid: Mr Christ X.user.id,
+            userJid: sock.user.id,
             quoted: m
         }
     );
-    await Mr Christ X.relayMessage(m.chat, msg.message, {
+    await sock.relayMessage(m.chat, msg.message, {
         messageId: msg.key.id
     });
     break;
@@ -8919,9 +8919,9 @@ case 'repo': {
 break
 case 'owner': {
     try {
-        const ownerNumber = Mr Christ X.user.id.split('@')[0].split(':')[0];
+        const ownerNumber = sock.user.id.split('@')[0].split(':')[0];
         const displayNumber = `+${ownerNumber}`;
-        const ownerName = Mr Christ X.user.name || displayNumber;
+        const ownerName = sock.user.name || displayNumber;
         const vcard = `BEGIN:VCARD
 VERSION:3.0
 N:;${ownerName};;;
@@ -8930,7 +8930,7 @@ TEL;type=CELL;type=VOICE;waid=${ownerNumber}:${displayNumber}
 X-WA-BIZ-NAME:${ownerName}
 X-WA-BIZ-DESCRIPTION:Yo here's my contact
 END:VCARD`;
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 contacts: {
@@ -8965,7 +8965,7 @@ case 's': {
         
         if (/image/.test(mime)) {
             let media = await m.quoted.download();
-            let encmedia = await Mr Christ X.sendImageAsSticker(m.chat, media, m, {
+            let encmedia = await sock.sendImageAsSticker(m.chat, media, m, {
                 packname: packname,
                 author: author
             });
@@ -8976,7 +8976,7 @@ case 's': {
                 return reply('Maximum video length for sticker is 10 seconds!');
             
             let media = await m.quoted.download();
-            let encmedia = await Mr Christ X.sendVideoAsSticker(m.chat, media, m, {
+            let encmedia = await sock.sendVideoAsSticker(m.chat, media, m, {
                 packname: packname,
                 author: author
             });
@@ -8999,10 +8999,10 @@ case 's': {
                 reply(mess.wait)
                 atas = text.split('|')[0] ? text.split('|')[0] : '-'
                 bawah = text.split('|')[1] ? text.split('|')[1] : '-'
-                let dwnld = await Mr Christ X.downloadAndSaveMediaMessage(qmsg)
+                let dwnld = await sock.downloadAndSaveMediaMessage(qmsg)
                 let fatGans = await TelegraPh(dwnld)
                 let smeme = `https://api.memegen.link/images/custom/${encodeURIComponent(bawah)}/${encodeURIComponent(atas)}.png?background=${fatGans}`
-                let pop = await Mr Christ X.sendImageAsSticker(m.chat, smeme, m, {
+                let pop = await sock.sendImageAsSticker(m.chat, smeme, m, {
                     packname: packname,
                     author: author
                 })
@@ -9020,12 +9020,12 @@ case 'swm': case 'steal': case 'stickerwm': case 'take': {
 
     if (quoted.isAnimated) {
 
-        const media = await Mr Christ X.downloadAndSaveMediaMessage(
+        const media = await sock.downloadAndSaveMediaMessage(
             quoted,
             "./database/temp/gifee"
         )
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             from,
             { sticker: fs.readFileSync(media) },
             { quoted:m }
@@ -9037,7 +9037,7 @@ case 'swm': case 'steal': case 'stickerwm': case 'take': {
 
         const media = await quoted.download()
 
-        await Mr Christ X.sendImageAsSticker(
+        await sock.sendImageAsSticker(
             m.chat,
             media,
             m,
@@ -9049,12 +9049,12 @@ case 'swm': case 'steal': case 'stickerwm': case 'take': {
         if ((quoted.msg || quoted).seconds > 10)
         return reply('Maximum 10 Seconds!')
 
-        const media = await Mr Christ X.downloadAndSaveMediaMessage(
+        const media = await sock.downloadAndSaveMediaMessage(
             quoted,
             "./database/temp/sticker_video"
         )
 
-        await Mr Christ X.sendVideoAsSticker(
+        await sock.sendVideoAsSticker(
             m.chat,
             media,
             m,
@@ -9090,7 +9090,7 @@ case 'toimg': {
             return reply('❌ Failed to download the sticker.');
         }
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 image: media,
@@ -9117,13 +9117,13 @@ case 'tovideo': {
     const tempDir = './database/temp'
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '⏳', key: m.key }
         })
 
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
 
-        media = await Mr Christ X.downloadAndSaveMediaMessage(
+        media = await sock.downloadAndSaveMediaMessage(
             qmsg,
             `${tempDir}/${Date.now()}`
         )
@@ -9138,19 +9138,19 @@ case 'tovideo': {
             result = fs.readFileSync(media)
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             video: result,
             mimetype: 'video/mp4',
             caption: 'Converted To MP4'
         }, { quoted: m })
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
     } catch (err) {
         console.error('tomp4 error:', err)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -9167,15 +9167,15 @@ case 'toaudio': {
         return reply(`Send or reply a video/audio with caption ${prefix + command}`)
     }
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: '⏳', key: m.key }
     })
 
     try {
-        const media = await Mr Christ X.downloadMediaMessage(qmsg)
+        const media = await sock.downloadMediaMessage(qmsg)
         const audio = await toAudio(media, 'mp4')
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 audio: audio,
@@ -9184,14 +9184,14 @@ case 'toaudio': {
             { quoted: m }
         )
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
     } catch (err) {
         console.error(err)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -9206,14 +9206,14 @@ case 'tovideonote': {
         return reply(`Send or reply a video with caption ${prefix + command}`)
     }
 
-    await Mr Christ X.sendMessage(m.chat, {
+    await sock.sendMessage(m.chat, {
         react: { text: '⏳', key: m.key }
     })
 
     try {
-        const media = await Mr Christ X.downloadMediaMessage(qmsg)
+        const media = await sock.downloadMediaMessage(qmsg)
 
-        await Mr Christ X.sendMessage(
+        await sock.sendMessage(
             m.chat,
             {
                 video: media,
@@ -9223,12 +9223,12 @@ case 'tovideonote': {
             { quoted: m }
         )
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
     } catch (err) {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -9240,9 +9240,9 @@ case 'tovideonote': {
 case 'tomp3': {
 if (!/video/.test(mime) && !/audio/.test(mime)) return reply(`Send/Reply Video/Audio that you want to make into MP3 with caption ${prefix + command}`)
                 reply(mess.wait)
-                let media = await Mr Christ X.downloadMediaMessage(qmsg)
+                let media = await sock.downloadMediaMessage(qmsg)
                 let audio = await toAudio(media, 'mp4')
-                Mr Christ X.sendMessage(m.chat, {
+                sock.sendMessage(m.chat, {
                     document: audio,
                     mimetype: 'audio/mp3',
                     fileName: `Elite.mp3`
@@ -9256,12 +9256,12 @@ if (!/video/.test(mime) && !/audio/.test(mime)) return reply(`Send/Reply Video/A
             case 'toptt': {
                 if (!/video/.test(mime) && !/audio/.test(mime)) return reply(`Reply Video/Audio that you want to make into a VN with caption ${prefix + command}`)
                 reply(mess.wait)
-                let media = await Mr Christ X.downloadMediaMessage(qmsg)
+                let media = await sock.downloadMediaMessage(qmsg)
                 let {
                     toPTT
                 } = require('./lib/converter')
                 let audio = await toPTT(media, 'mp4')
-                Mr Christ X.sendMessage(m.chat, {
+                sock.sendMessage(m.chat, {
                     audio: audio,
                     mimetype: 'audio/mpeg',
                     ptt: true
@@ -9275,11 +9275,11 @@ case 'togif': {
     if (!mime) return reply(`Reply to a sticker or video with caption *${prefix + command}*`)
 
     try {
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '⏳', key: m.key }
         })
 
-        const media = await Mr Christ X.downloadAndSaveMediaMessage(qmsg)
+        const media = await sock.downloadAndSaveMediaMessage(qmsg)
 
         let result
 
@@ -9293,13 +9293,13 @@ case 'togif': {
             return reply('Only sticker or video is supported')
         }
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             video: { url: result },
             gifPlayback: true,
             caption: 'Converted To GIF'
         }, { quoted: m })
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '✅', key: m.key }
         })
 
@@ -9308,7 +9308,7 @@ case 'togif': {
     } catch (e) {
         console.error(e)
 
-        await Mr Christ X.sendMessage(m.chat, {
+        await sock.sendMessage(m.chat, {
             react: { text: '❌', key: m.key }
         })
 
@@ -9339,7 +9339,7 @@ if (!imageUrl) return reply("❌ Emoji mix not found.")
 
 let buffer = await getBuffer(imageUrl)
 
-await Mr Christ X.sendImageAsSticker(m.chat, buffer, m, {
+await sock.sendImageAsSticker(m.chat, buffer, m, {
 packname: global.packname,
 author: global.author
 })
@@ -9354,8 +9354,8 @@ break
             case 'toviewonce': {
                 if (!quoted) return reply(`Reply Image/Video`)
                 if (/image/.test(mime)) {
-                    anuan = await Mr Christ X.downloadAndSaveMediaMessage(quoted)
-                    Mr Christ X.sendMessage(m.chat, {
+                    anuan = await sock.downloadAndSaveMediaMessage(quoted)
+                    sock.sendMessage(m.chat, {
                         image: {
                             url: anuan
                         },
@@ -9366,8 +9366,8 @@ break
                         quoted: m
                     })
                 } else if (/video/.test(mime)) {
-                    anuanuan = await Mr Christ X.downloadAndSaveMediaMessage(quoted)
-                    Mr Christ X.sendMessage(m.chat, {
+                    anuanuan = await sock.downloadAndSaveMediaMessage(quoted)
+                    sock.sendMessage(m.chat, {
                         video: {
                             url: anuanuan
                         },
@@ -9391,7 +9391,7 @@ case 'qr': {
             scale: 35
         })
 
-        await Mr Christ X.sendMessage(from, {
+        await sock.sendMessage(from, {
             image: qrBuffer,
             caption: 'Here you go!'
         }, {
@@ -9421,7 +9421,7 @@ if (rawOwner.endsWith('@lid')) {
 } else {
     ownerId = rawOwner.replace(/[^0-9]/g, '')
     if (!ownerId) return reply('Use a valid phone number or LID')
-    const ceknye = await Mr Christ X.onWhatsApp(ownerId)
+    const ceknye = await sock.onWhatsApp(ownerId)
     if (ceknye.length === 0) return reply('Enter a valid WhatsApp number')
 }
 if (owner.includes(ownerId)) return reply('That owner is already added')
@@ -9446,7 +9446,7 @@ reply(`✅ ${ownerId} was removed from the owner list`)
 }
 break
 case 'emptychat':
-    Mr Christ X.sendMessage(
+    sock.sendMessage(
         from,
         {
             text: '\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n',
@@ -9465,7 +9465,7 @@ let elitemenuoh = `┏━━━━━━━━━━━━━━━━❍
 ┣❍ *ʙᴏᴛ ɪɴғᴏʀᴍᴀᴛɪᴏɴ:*
 ┣❍ *ᴜꜱᴇʀ:* ${pushname}
 ┣❍ *ᴠᴇʀꜱɪᴏɴ:* v1.1.1
-┣❍ *ᴍᴏᴅᴇ:* ${Mr Christ X.public ? 'Public' : 'Private'} 
+┣❍ *ᴍᴏᴅᴇ:* ${sock.public ? 'Public' : 'Private'} 
 ┣❍ *ᴘʀᴇғɪx:* [ ${prefix} ]
 ┣❍ *ᴏᴡɴᴇʀ:* ${ownername}
 ┣❍ *sᴘᴇᴇᴅ:* ${latensie.toFixed(4)}ms
@@ -9724,11 +9724,11 @@ ${readmore}┏━━━━━━━━━━━━━━━❍
 > ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʀᴇᴠᴏʟᴜᴛɪᴏɴ ᴍᴅ`; 
 const reactions = ["✅", "🔥", "😎", "👌", "😏", "🌟", "⚡", "💥", "🎉", "🧘", "🥺", "😉", "🔔", "🤫"];
 const randomReaction = reactions[Math.floor(Math.random() * reactions.length)];
-await Mr Christ X.sendMessage(m.chat, {
+await sock.sendMessage(m.chat, {
     react: { text: randomReaction, key: m.key } 
   }); 
-await Mr Christ X.sendMessage(m.chat, {
-  image: Revolution MDpic,
+await sock.sendMessage(m.chat, {
+  image: RevolutionMDpic,
   caption: elitemenuoh
 }, { quoted: m });
 break
